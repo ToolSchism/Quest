@@ -5,6 +5,13 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Rogue of the Waves</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+    <div id="rotate-message">
+        <p>Please rotate your device to landscape mode.</p>
+    </div>
     <style>
         body {
             font-family: 'Helvetica Neue', Arial, sans-serif;
@@ -26,6 +33,23 @@
             max-width: 2000px;
             height: 90%;
             overflow-y: auto;
+        }
+
+        #rotate-message {
+            display: none;
+            /* Initially hidden */
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #000;
+            color: #fff;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            z-index: 1000;
         }
 
         h1,
@@ -128,755 +152,771 @@
             opacity: 1;
         }
     </style>
-</head>
+    </head>
 
-<body>
-    <div id="game-container">
-        <h1 id="wave-title">Wave 1</h1>
-        <div id="enemy-container"></div>
-        <div id="player-container">
-            <div id="player-stats"></div>
-        </div>
-        <div id="action-buttons">
-            <button id="attack-btn">Attack</button>
-            <button id="defend-btn">Defend</button>
-            <button id="bravery-btn">Bravery</button>
-        </div>
-        <div id="game-log"></div>
-        <div id="shop">
-            <h2>Shop</h2>
-            <button id="buy-potion">Buy Healing Potion (10 gold)</button>
-        </div>
-        <div id="inventory">
-            <h2>Inventory</h2>
-            <button id="use-potion">Use Healing Potion</button>
-        </div>
-        <div id="artifacts">
-            <h2>Artifacts Obtained</h2>
+    <body>
+        <div id="game-container">
+            <h1 id="wave-title">Wave 1</h1>
+            <div id="enemy-container"></div>
+            <div id="player-container">
+                <div id="player-stats"></div>
+            </div>
+            <div id="action-buttons">
+                <button id="attack-btn">Attack</button>
+                <button id="defend-btn">Defend</button>
+                <button id="bravery-btn">Bravery</button>
+            </div>
+            <div id="game-log"></div>
+            <div id="shop">
+                <h2>Shop</h2>
+                <button id="buy-potion">Buy Healing Potion (10 gold)</button>
+            </div>
+            <div id="inventory">
+                <h2>Inventory</h2>
+                <button id="use-potion">Use Healing Potion</button>
+            </div>
+            <div id="artifacts">
+                <h2>Artifacts Obtained</h2>
+            </div>
+
         </div>
 
-    </div>
+        <script>
+            let player = {
+                maxHealth: 50,
+                health: 50,
+                attack: 5,
+                defense: 0,
+                tempDefense: 0,
+                tempAttack: 0,
+                level: 1,
+                experience: 0,
+                gold: 0,
+                potions: 0,
+                FullHealthExtraDamage: 1,
+                critChance: 0,
+                gof: false,
+                stoneIdol: false,
+                shatterImbue: false,
+                weaknessImbue: false,
+                iceCharm: false,
+                stoneSkinStacks: 0,
+                artifacts: [],
+                banishedArtifacts: []
+            };
 
-    <script>
-        let player = {
-            maxHealth: 50,
-            health: 50,
-            attack: 5,
-            defense: 0,
-            tempDefense: 0,
-            tempAttack: 0,
-            level: 1,
-            experience: 0,
-            gold: 0,
-            potions: 0,
-            FullHealthExtraDamage: 1,
-            critChance: 0,
-            gof: false,
-            stoneIdol: false,
-            shatterImbue: false,
-            weaknessImbue: false,
-            iceCharm: false,
-            stoneSkinStacks: 0,
-            artifacts: [],
-            banishedArtifacts: []
-        };
+            const defaults = {
+                maxHealth: 50,
+                health: 50,
+                attack: 5,
+                defense: 0,
+                tempDefense: 0,
+                tempAttack: 0,
+                level: 1,
+                experience: 0,
+                gold: 0,
+                potions: 0,
+                FullHealthExtraDamage: 1,
+                critChance: 0,
+                gof: false,
+                stoneIdol: false,
+                shatterImbue: false,
+                weaknessImbue: false,
+                iceCharm: false,
+                stoneSkinStacks: 0,
+                artifacts: [],
+                banishedArtifacts: []
+            };
 
-        const defaults = {
-            maxHealth: 50,
-            health: 50,
-            attack: 5,
-            defense: 0,
-            tempDefense: 0,
-            tempAttack: 0,
-            level: 1,
-            experience: 0,
-            gold: 0,
-            potions: 0,
-            FullHealthExtraDamage: 1,
-            critChance: 0,
-            gof: false,
-            stoneIdol: false,
-            shatterImbue: false,
-            weaknessImbue: false,
-            iceCharm: false,
-            stoneSkinStacks: 0,
-            artifacts: [],
-            banishedArtifacts: []
-        };
+            const artifacts = {
+                "Executioner's Hood": {
+                    description: "/Healthy/ enemies take 50% more damage.",
+                    onGet: function () {
+                        player.FullHealthExtraDamage += 0.5;
+                    },
+                    onDiscard: function () {
+                        player.FullHealthExtraDamage -= 0.5;
+                    }
+                },
+                "Gauntlets of Fate": {
+                    description: "Damage dealt is 50% to 150% of its original value.",
+                    onGet: function () {
+                        player.gof = true;
+                    },
+                    onDiscard: function () {
+                        player.gof = false;
+                    }
+                },
+                "Robotic Eye": {
+                    description: "Grants 10% /crit/ chance.",
+                    onGet: function () {
+                        player.critChance += 0.1;
+                    },
+                    onDiscard: function () {
+                        player.critChance -= 0.1;
+                    }
+                },
+                "Stone Idol": {
+                    description: "Defending gives you 6 stacks of /Stone Skin/.",
+                    onGet: function () {
+                        player.stoneIdol = true;
+                    },
+                    onDiscard: function () {
+                        player.stoneIdol = false;
+                    }
+                },
+                "Imbuement of Shattering": {
+                    description: "33% chance on hit to inflict /Shattered/.",
+                    onGet: function () {
+                        player.shatterImbue = true;
+                    },
+                    onDiscard: function () {
+                        player.shatterImbue = false;
+                    }
+                },
+                "Imbuement of Weakness": {
+                    description: "33% chance on hit to inflict /Weakness/.",
+                    onGet: function () {
+                        player.weaknessImbue = true;
+                    },
+                    onDiscard: function () {
+                        player.weaknessImbue = false;
+                    }
+                },
+                "Ice Charm": {
+                    description: "15% chance on hit to /Freeze/ the target for 3 turns.",
+                    onGet: function () {
+                        player.iceCharm = true;
+                    },
+                    onDiscard: function () {
+                        player.iceCharm = false;
+                    }
+                },
+                "Midas Charm": {
+                    description: "Gain the /Midas/ effect.",
+                    onGet: function () {
+                        player.midas = true;
+                    },
+                    onDiscard: function () {
+                        player.midas = false;
+                    }
+                }
+            };
 
-        const artifacts = {
-            "Executioner's Hood": {
-                description: "/Healthy/ enemies take 50% more damage.",
-                onGet: function () {
-                    player.FullHealthExtraDamage += 0.5;
-                },
-                onDiscard: function () {
-                    player.FullHealthExtraDamage -= 0.5;
-                }
-            },
-            "Gauntlets of Fate": {
-                description: "Damage dealt is 50% to 150% of its original value.",
-                onGet: function () {
-                    player.gof = true;
-                },
-                onDiscard: function () {
-                    player.gof = false;
-                }
-            },
-            "Robotic Eye": {
-                description: "Grants 10% /crit/ chance.",
-                onGet: function () {
-                    player.critChance += 0.1;
-                },
-                onDiscard: function () {
-                    player.critChance -= 0.1;
-                }
-            },
-            "Stone Idol": {
-                description: "Defending gives you 6 stacks of /Stone Skin/.",
-                onGet: function () {
-                    player.stoneIdol = true;
-                },
-                onDiscard: function () {
-                    player.stoneIdol = false;
-                }
-            },
-            "Imbuement of Shattering": {
-                description: "33% chance on hit to inflict /Shattered/.",
-                onGet: function () {
-                    player.shatterImbue = true;
-                },
-                onDiscard: function () {
-                    player.shatterImbue = false;
-                }
-            },
-            "Imbuement of Weakness": {
-                description: "33% chance on hit to inflict /Weakness/.",
-                onGet: function () {
-                    player.weaknessImbue = true;
-                },
-                onDiscard: function () {
-                    player.weaknessImbue = false;
-                }
-            },
-            "Ice Charm": {
-                description: "15% chance on hit to /Freeze/ the target for 3 turns.",
-                onGet: function () {
-                    player.iceCharm = true;
-                },
-                onDiscard: function () {
-                    player.iceCharm = false;
-                }
-            },
-            "Midas Charm": {
-                description: "Gain the /Midas/ effect.",
-                onGet: function () {
-                    player.midas = true;
-                },
-                onDiscard: function () {
-                    player.midas = false;
-                }
+
+            const translator = {
+                "Stone Skin": "Reduces incoming damage by 1 per stack. Stacks reset at the end of the wave.",
+                "Healthy": "Being at full health grants you the Healthy state.",
+                "crit": "Crits aka Critical Hits deal twice the damage of a regular hit.",
+                "Weakness": "Reduces attack by 20%.",
+                "Shattered": "Reduces defense to 0.",
+                "Freeze": "Entirely unable to act while in this state.",
+                "Midas": "Damage is reduced by 10%. 50% of damage dealt is given to you in gold."
+            };
+
+            // Function to show tooltip
+            function showTooltip(artifactName) {
+                const tooltip = document.getElementById(`tooltip-${artifactName}`);
+                tooltip.style.visibility = 'visible';
+                tooltip.style.opacity = 1;
             }
-        };
 
+            // Function to hide tooltip
+            function hideTooltip() {
+                const tooltips = document.querySelectorAll('.tooltiptext');
+                tooltips.forEach(tooltip => {
+                    tooltip.style.visibility = 'hidden';
+                    tooltip.style.opacity = 0;
+                });
+            }
 
-        const translator = {
-            "Stone Skin": "Reduces incoming damage by 1 per stack. Stacks reset at the end of the wave.",
-            "Healthy": "Being at full health grants you the Healthy state.",
-            "crit": "Crits aka Critical Hits deal twice the damage of a regular hit.",
-            "Weakness": "Reduces attack by 20%.",
-            "Shattered": "Reduces defense to 0.",
-            "Freeze": "Entirely unable to act while in this state.",
-            "Midas": "Damage is reduced by 10%. 50% of damage dealt is given to you in gold."
-        };
-
-        // Function to show tooltip
-        function showTooltip(artifactName) {
-            const tooltip = document.getElementById(`tooltip-${artifactName}`);
-            tooltip.style.visibility = 'visible';
-            tooltip.style.opacity = 1;
-        }
-
-        // Function to hide tooltip
-        function hideTooltip() {
-            const tooltips = document.querySelectorAll('.tooltiptext');
-            tooltips.forEach(tooltip => {
-                tooltip.style.visibility = 'hidden';
-                tooltip.style.opacity = 0;
+            // Initialize tooltips for each artifact
+            const artifactElements = document.querySelectorAll('.tooltip');
+            artifactElements.forEach(artifact => {
+                const tooltipTrigger = artifact.innerText.trim().replace(/\//g, '');
+                const tooltipText = translator[tooltipTrigger];
+                const tooltipSpan = artifact.querySelector('.tooltiptext');
+                if (tooltipText) {
+                    tooltipSpan.textContent = tooltipText;
+                }
             });
-        }
 
-        // Initialize tooltips for each artifact
-        const artifactElements = document.querySelectorAll('.tooltip');
-        artifactElements.forEach(artifact => {
-            const tooltipTrigger = artifact.innerText.trim().replace(/\//g, '');
-            const tooltipText = translator[tooltipTrigger];
-            const tooltipSpan = artifact.querySelector('.tooltiptext');
-            if (tooltipText) {
-                tooltipSpan.textContent = tooltipText;
-            }
-        });
-
-        const enemyTypes = {
-            Slime: {
-                maxHealth: 7,
-                health: 7,
-                attack: 3,
-                defense: 1,
-                experience: 3,
-                gold: 5,
-                specialAttack: {
-                    name: 'Leap',
-                    description: 'Charges for one turn, then deals 3x damage',
-                    charge: 0,
-                    execute: function (enemy) {
-                        if (this.charge === 0) {
-                            this.charge = 1;
-                            return `The slime charges kinetic energy for later...`;
-                        } else {
-                            this.charge = 0;
-                            return { damage: enemy.attack * 3, message: `The slime leaps full speed towards you!` };
+            const enemyTypes = {
+                Slime: {
+                    maxHealth: 7,
+                    health: 7,
+                    attack: 3,
+                    defense: 1,
+                    experience: 3,
+                    gold: 5,
+                    specialAttack: {
+                        name: 'Leap',
+                        description: 'Charges for one turn, then deals 3x damage',
+                        charge: 0,
+                        execute: function (enemy) {
+                            if (this.charge === 0) {
+                                this.charge = 1;
+                                return `The slime charges kinetic energy for later...`;
+                            } else {
+                                this.charge = 0;
+                                return { damage: enemy.attack * 3, message: `The slime leaps full speed towards you!` };
+                            }
                         }
                     }
-                }
-            },
-            Bat: {
-                maxHealth: 4,
-                health: 4,
-                attack: 7,
-                defense: 0.5,
-                experience: 4,
-                gold: 4,
-                specialAttack: {
-                    name: 'Ultra Shield',
-                    description: 'Gain a LOT of defense for the turn.',
-                    execute: function (enemy) {
-                        enemy.tempDefense = 99999;
-                        return `The bat encases itself in an Ultra Shield! (0 physical damage this turn)`;
+                },
+                Bat: {
+                    maxHealth: 4,
+                    health: 4,
+                    attack: 7,
+                    defense: 0.5,
+                    experience: 4,
+                    gold: 4,
+                    specialAttack: {
+                        name: 'Ultra Shield',
+                        description: 'Gain a LOT of defense for the turn.',
+                        execute: function (enemy) {
+                            enemy.tempDefense = 99999;
+                            return `The bat encases itself in an Ultra Shield! (0 physical damage this turn)`;
+                        }
                     }
-                }
-            },
-            Imp: {
-                maxHealth: 12,
-                health: 12,
-                attack: 3,
-                defense: 2,
-                experience: 4,
-                gold: 7,
-                specialAttack: {
-                    name: 'Empower Ally',
-                    description: 'Increases a random ally\'s attack by 1',
-                    execute: function (enemy, allEnemies) {
-                        const validTargets = allEnemies.filter(e => e.health > 0);
-                        const target = validTargets[Math.floor(Math.random() * validTargets.length)];
-                        target.attack += 1;
-                        return `The imp empowers the ${target.type}, increasing its attack!`;
+                },
+                Imp: {
+                    maxHealth: 12,
+                    health: 12,
+                    attack: 3,
+                    defense: 2,
+                    experience: 4,
+                    gold: 7,
+                    specialAttack: {
+                        name: 'Empower Ally',
+                        description: 'Increases a random ally\'s attack by 1',
+                        execute: function (enemy, allEnemies) {
+                            const validTargets = allEnemies.filter(e => e.health > 0);
+                            const target = validTargets[Math.floor(Math.random() * validTargets.length)];
+                            target.attack += 1;
+                            return `The imp empowers the ${target.type}, increasing its attack!`;
+                        }
                     }
-                }
-            },
-            "Skeletal Mage": {
-                maxHealth: 5,
-                health: 5,
-                attack: 1,
-                defense: 0,
-                experience: 3,
-                gold: 10,
-                specialAttack: {
-                    name: 'Supercharge',
-                    description: 'Heal an ally for 5 health and give them +5 max health as well.',
-                    execute: function (enemy, allEnemies) {
-                        const validTargets = allEnemies.filter(e => e.health > 0);
-                        const target = validTargets[Math.floor(Math.random() * validTargets.length)];
-                        target.health += 5;
-                        target.maxHealth += 5
-                        return `The skeletal mage supercharges ${target.type}! (+5 hp/max hp)`;
+                },
+                "Skeletal Mage": {
+                    maxHealth: 5,
+                    health: 5,
+                    attack: 1,
+                    defense: 0,
+                    experience: 3,
+                    gold: 10,
+                    specialAttack: {
+                        name: 'Supercharge',
+                        description: 'Heal an ally for 5 health and give them +5 max health as well.',
+                        execute: function (enemy, allEnemies) {
+                            const validTargets = allEnemies.filter(e => e.health > 0);
+                            const target = validTargets[Math.floor(Math.random() * validTargets.length)];
+                            target.health += 5;
+                            target.maxHealth += 5
+                            return `The skeletal mage supercharges ${target.type}! (+5 hp/max hp)`;
+                        }
                     }
-                }
-            },
-            Goblin: {
-                maxHealth: 8,
-                health: 8,
-                attack: 6,
-                defense: 2,
-                experience: 6,
-                gold: 8,
-                specialAttack: {
-                    name: 'Sneak Attack',
-                    description: 'Deals double damage if the enemy has full health.',
-                    execute: function (enemy, player) {
-                        const damage = player.health === player.maxHealth ? enemy.attack * 2 : enemy.attack;
-                        return { damage, message: `The goblin executes a sneak attack!` };
+                },
+                Goblin: {
+                    maxHealth: 8,
+                    health: 8,
+                    attack: 6,
+                    defense: 2,
+                    experience: 6,
+                    gold: 8,
+                    specialAttack: {
+                        name: 'Sneak Attack',
+                        description: 'Deals double damage if the enemy has full health.',
+                        execute: function (enemy, player) {
+                            const damage = player.health === player.maxHealth ? enemy.attack * 2 : enemy.attack;
+                            return { damage, message: `The goblin executes a sneak attack!` };
+                        }
                     }
-                }
-            },
-            Troll: {
-                maxHealth: 20,
-                health: 20,
-                attack: 4,
-                defense: 3,
-                experience: 10,
-                gold: 12,
-                specialAttack: {
-                    name: 'Regenerate',
-                    description: 'Regains 3 health every turn.',
-                    execute: function (enemy) {
-                        enemy.health = Math.min(enemy.maxHealth, enemy.health + 3);
-                        return `The troll regenerates some of its health!`;
+                },
+                Troll: {
+                    maxHealth: 20,
+                    health: 20,
+                    attack: 4,
+                    defense: 3,
+                    experience: 10,
+                    gold: 12,
+                    specialAttack: {
+                        name: 'Regenerate',
+                        description: 'Regains 3 health every turn.',
+                        execute: function (enemy) {
+                            enemy.health = Math.min(enemy.maxHealth, enemy.health + 3);
+                            return `The troll regenerates some of its health!`;
+                        }
                     }
-                }
-            },
-            "Dark Sorcerer": {
-                maxHealth: 10,
-                health: 10,
-                attack: 5,
-                defense: 1,
-                experience: 12,
-                gold: 15,
-                specialAttack: {
-                    name: 'Curse',
-                    description: 'Reduces the player\'s attack by 2 for the wave.',
-                    execute: function (enemy, player) {
-                        player.tempAttack -= 2;
-                        return `The dark sorcerer casts a curse on you, reducing your attack for the wave!`;
+                },
+                "Dark Sorcerer": {
+                    maxHealth: 10,
+                    health: 10,
+                    attack: 5,
+                    defense: 1,
+                    experience: 12,
+                    gold: 15,
+                    specialAttack: {
+                        name: 'Curse',
+                        description: 'Reduces the player\'s attack by 2 for the wave.',
+                        execute: function (enemy, player) {
+                            player.tempAttack -= 2;
+                            return `The dark sorcerer casts a curse on you, reducing your attack for the wave!`;
+                        }
                     }
+                },
+            };
+
+            let currentWave = 1;
+            let currentEnemies = [];
+            let selectedEnemy = null;
+            let statMod = 1;
+            let potionPrice = 10;
+
+            function generateEnemies() {
+                const enemyCount = Math.min(Math.floor(1 + (currentWave / 8)), 6);
+                const enemyTypesArray = Object.keys(enemyTypes);
+                currentEnemies = [];
+
+                // Object to keep track of enemy counts
+                const enemyTypeCounts = {};
+
+                for (let i = 0; i < enemyCount; i++) {
+                    const randomType = enemyTypesArray[Math.floor(Math.random() * enemyTypesArray.length)];
+
+                    if (!enemyTypeCounts[randomType]) {
+                        enemyTypeCounts[randomType] = 0;
+                    }
+
+                    enemyTypeCounts[randomType]++;
+                    const count = enemyTypeCounts[randomType];
+
+                    // Apply unique notation only if there are multiple of the same type
+                    const uniqueType = count > 1 ? `${randomType} ${String.fromCharCode(64 + count)}` : randomType;
+
+                    currentEnemies.push(createEnemy(randomType, uniqueType));
                 }
-            },
-        };
 
-        let currentWave = 1;
-        let currentEnemies = [];
-        let selectedEnemy = null;
-        let statMod = 1;
-        let potionPrice = 10;
-
-        function generateEnemies() {
-            const enemyCount = Math.min(Math.floor(1 + (currentWave / 8)), 6);
-            const enemyTypesArray = Object.keys(enemyTypes);
-            currentEnemies = [];
-
-            // Object to keep track of enemy counts
-            const enemyTypeCounts = {};
-
-            for (let i = 0; i < enemyCount; i++) {
-                const randomType = enemyTypesArray[Math.floor(Math.random() * enemyTypesArray.length)];
-
-                if (!enemyTypeCounts[randomType]) {
-                    enemyTypeCounts[randomType] = 0;
-                }
-
-                enemyTypeCounts[randomType]++;
-                const count = enemyTypeCounts[randomType];
-
-                // Apply unique notation only if there are multiple of the same type
-                const uniqueType = count > 1 ? `${randomType} ${String.fromCharCode(64 + count)}` : randomType;
-
-                currentEnemies.push(createEnemy(randomType, uniqueType));
+                selectedEnemy = 0;
             }
 
-            selectedEnemy = 0;
-        }
-
-        function createEnemy(baseType, uniqueType) {
-            const baseStats = enemyTypes[baseType];
-            return {
-                ...baseStats,
-                maxHealth: Math.round(baseStats.maxHealth * statMod),
-                health: Math.round(baseStats.health * statMod),
-                attack: Math.round(baseStats.attack * statMod),
-                defense: Math.round(baseStats.defense * statMod),
-                experience: Math.round(baseStats.experience * statMod),
-                type: uniqueType,
-                tempDefense: 0,
-                shattered: false,
-                weakness: false,
-                frozenCounter: 0,
-            };
-        }
+            function createEnemy(baseType, uniqueType) {
+                const baseStats = enemyTypes[baseType];
+                return {
+                    ...baseStats,
+                    maxHealth: Math.round(baseStats.maxHealth * statMod),
+                    health: Math.round(baseStats.health * statMod),
+                    attack: Math.round(baseStats.attack * statMod),
+                    defense: Math.round(baseStats.defense * statMod),
+                    experience: Math.round(baseStats.experience * statMod),
+                    type: uniqueType,
+                    tempDefense: 0,
+                    shattered: false,
+                    weakness: false,
+                    frozenCounter: 0,
+                };
+            }
 
 
 
 
-        function updateUI() {
-            // Update player stats display
-            document.getElementById('player-stats').innerHTML = `
+            function updateUI() {
+                // Update player stats display
+                document.getElementById('player-stats').innerHTML = `
         You: Level ${player.level}<br>
         HP ${player.health}/${player.maxHealth} | ATK ${player.attack} (+${player.tempAttack}) | DEF ${player.defense} (+${player.tempDefense})<br>
         ${player.experience} xp | ${player.gold}G
     `;
 
-            // Update enemy container display
-            const enemyContainer = document.getElementById('enemy-container');
-            enemyContainer.innerHTML = '';
-            currentEnemies.forEach((enemy, index) => {
-                const enemyElement = document.createElement('div');
-                enemyElement.classList.add('enemy');
-                if (selectedEnemy === index) {
-                    enemyElement.classList.add('selected');
-                }
-                enemyElement.innerHTML = `
+                // Update enemy container display
+                const enemyContainer = document.getElementById('enemy-container');
+                enemyContainer.innerHTML = '';
+                currentEnemies.forEach((enemy, index) => {
+                    const enemyElement = document.createElement('div');
+                    enemyElement.classList.add('enemy');
+                    if (selectedEnemy === index) {
+                        enemyElement.classList.add('selected');
+                    }
+                    enemyElement.innerHTML = `
             ${enemy.type}<br>
             HP ${enemy.health}/${enemy.maxHealth}<br>
             ATK ${enemy.attack} | DEF ${enemy.defense} (+${enemy.tempDefense})<br>
             Special: ${enemy.specialAttack.name}
         `;
-                enemyElement.onclick = () => selectEnemy(index);
-                enemyContainer.appendChild(enemyElement);
-            });
+                    enemyElement.onclick = () => selectEnemy(index);
+                    enemyContainer.appendChild(enemyElement);
+                });
 
-            // Update potion buttons
-            document.getElementById('buy-potion').innerHTML = `Buy Healing Potion (${potionPrice}G)`;
-            document.getElementById('use-potion').innerHTML = `Healing Potion (${player.potions})`;
+                // Update potion buttons
+                document.getElementById('buy-potion').innerHTML = `Buy Healing Potion (${potionPrice}G)`;
+                document.getElementById('use-potion').innerHTML = `Healing Potion (${player.potions})`;
 
-            // Update wave title
-            const waveTitle = document.getElementById('wave-title');
-            waveTitle.textContent = `Wave ${currentWave}`;
+                // Update wave title
+                const waveTitle = document.getElementById('wave-title');
+                waveTitle.textContent = `Wave ${currentWave}`;
 
-            // Update artifacts display
-            const artifactsContainer = document.getElementById('artifacts');
-            artifactsContainer.innerHTML = `<h2>Artifacts Obtained</h2>`;
+                // Update artifacts display
+                const artifactsContainer = document.getElementById('artifacts');
+                artifactsContainer.innerHTML = `<h2>Artifacts Obtained</h2>`;
 
-            if (player.artifacts.length === 0) {
-                artifactsContainer.innerHTML += `<p>No artifacts obtained yet.</p>`;
-            } else {
-                const artifactList = player.artifacts.map((artifact, index) => {
-                    const artifactKey = Object.keys(artifacts).find(key => artifacts[key] === artifact);
-                    return `<div class="artifact">
+                if (player.artifacts.length === 0) {
+                    artifactsContainer.innerHTML += `<p>No artifacts obtained yet.</p>`;
+                } else {
+                    const artifactList = player.artifacts.map((artifact, index) => {
+                        const artifactKey = Object.keys(artifacts).find(key => artifacts[key] === artifact);
+                        return `<div class="artifact">
                 <p><strong>${artifactKey}</strong><br>${addTooltip(artifact.description)}</p>
                 <button onclick="discardArtifact(${index})">Discard</button>
                 <button onclick="banishArtifact(${index})">Banish</button>
             </div>`;
-                }).join('');
-                artifactsContainer.innerHTML += artifactList;
-            }
-        }
-
-
-        function discardArtifact(index) {
-            const artifact = player.artifacts[index];
-            if (artifact.onDiscard) {
-                artifact.onDiscard(); // Apply discard effect if defined
-            }
-            player.artifacts.splice(index, 1); // Remove artifact from artifacts array
-            updateUI();
-        }
-
-        function banishArtifact(index) {
-            const artifact = player.artifacts[index];
-            if (artifact.onDiscard) {
-                artifact.onDiscard(); // Apply discard effect if defined
-            }
-            player.artifacts.splice(index, 1); // Remove artifact from artifacts array
-            player.banishedArtifacts.push(artifact); // Add artifact to banished artifacts
-            updateUI();
-        }
-
-        // Function to add tooltips based on defined terms
-        function addTooltip(description) {
-            const tooltipRegex = /\/([^\/]+)\//g; // Regex to find terms enclosed in slashes
-            return description.replace(tooltipRegex, (match, term) => {
-                const tooltipContent = translator[term.trim()];
-                if (tooltipContent) {
-                    return `<span class="tooltip">${term}<span class="tooltiptext">${tooltipContent}</span></span>`;
+                    }).join('');
+                    artifactsContainer.innerHTML += artifactList;
                 }
-                return match; // Return original term if not found in translator
-            });
-        }
-
-
-        function selectEnemy(index) {
-            selectedEnemy = index;
-            updateUI();
-            log(`Targeting ${currentEnemies[index].type}.`);
-        }
-
-        function attack() {
-            if (selectedEnemy === null) {
-                log('Please select an enemy to attack.');
-                return;
             }
 
-            const enemy = currentEnemies[selectedEnemy];
-            let damage = Math.max(0, (player.attack + player.tempAttack) - (enemy.defense + enemy.tempDefense));
-            let critBonusText = "";
 
-
-            // <Status Effects>
-            if (player.shatterImbue && Math.random() < 0.33 && enemy.shattered == false) {
-                enemy.shattered = true;
-                enemy.defense = 0;
-                log(`${enemy.type} has been inflicted with Shattered!`);
+            function discardArtifact(index) {
+                const artifact = player.artifacts[index];
+                if (artifact.onDiscard) {
+                    artifact.onDiscard(); // Apply discard effect if defined
+                }
+                player.artifacts.splice(index, 1); // Remove artifact from artifacts array
+                updateUI();
             }
 
-            if (player.weaknessImbue && Math.random() < 0.33 && enemy.weakness == false) {
-                enemy.weakness = true
-                enemy.attack = Math.round(enemy.attack * 0.8);
-                log(`${enemy.type} has been inflicted with Weakness!`);
+            function banishArtifact(index) {
+                const artifact = player.artifacts[index];
+                if (artifact.onDiscard) {
+                    artifact.onDiscard(); // Apply discard effect if defined
+                }
+                player.artifacts.splice(index, 1); // Remove artifact from artifacts array
+                player.banishedArtifacts.push(artifact); // Add artifact to banished artifacts
+                updateUI();
             }
 
-            if (player.iceCharm && Math.random() < 0.15 && enemy.frozenCounter == 0) {
-                enemy.frozenCounter == 3
-                log(`${enemy.type} has been frozen solid!`);
-            }
-            // </Status Effects>
-
-
-            // <Damage Mods - Positive>
-            if (enemy.health == enemy.maxHealth) {
-                damage = Math.max(0, ((player.attack + player.tempAttack) * player.FullHealthExtraDamage) - (enemy.defense + enemy.tempDefense));
-            }
-
-            if (player.gof) {
-                let damageMod = Math.random() + 0.5;
-                damage *= damageMod;
+            // Function to add tooltips based on defined terms
+            function addTooltip(description) {
+                const tooltipRegex = /\/([^\/]+)\//g; // Regex to find terms enclosed in slashes
+                return description.replace(tooltipRegex, (match, term) => {
+                    const tooltipContent = translator[term.trim()];
+                    if (tooltipContent) {
+                        return `<span class="tooltip">${term}<span class="tooltiptext">${tooltipContent}</span></span>`;
+                    }
+                    return match; // Return original term if not found in translator
+                });
             }
 
-            if (Math.random() < player.critChance) {
-                damage *= 2
-                critBonusText = " (Crit!)"
+
+            function selectEnemy(index) {
+                selectedEnemy = index;
+                updateUI();
+                log(`Targeting ${currentEnemies[index].type}.`);
             }
-            // </Damage Mods - Positive>
+
+            function attack() {
+                if (selectedEnemy === null) {
+                    log('Please select an enemy to attack.');
+                    return;
+                }
+
+                const enemy = currentEnemies[selectedEnemy];
+                let damage = Math.max(0, (player.attack + player.tempAttack) - (enemy.defense + enemy.tempDefense));
+                let critBonusText = "";
 
 
-            // <Damage Mods - Negative>
-            if (player.midas) {
-                damage *= 0.9
-            }
-            // </Damage Mods - Negative>  
+                // <Status Effects>
+                if (player.shatterImbue && Math.random() < 0.33 && enemy.shattered == false) {
+                    enemy.shattered = true;
+                    enemy.defense = 0;
+                    log(`${enemy.type} has been inflicted with Shattered!`);
+                }
+
+                if (player.weaknessImbue && Math.random() < 0.33 && enemy.weakness == false) {
+                    enemy.weakness = true
+                    enemy.attack = Math.round(enemy.attack * 0.8);
+                    log(`${enemy.type} has been inflicted with Weakness!`);
+                }
+
+                if (player.iceCharm && Math.random() < 0.15 && enemy.frozenCounter == 0) {
+                    enemy.frozenCounter == 3
+                    log(`${enemy.type} has been frozen solid!`);
+                }
+                // </Status Effects>
 
 
-            damage = Math.round(damage);
+                // <Damage Mods - Positive>
+                if (enemy.health == enemy.maxHealth) {
+                    damage = Math.max(0, ((player.attack + player.tempAttack) * player.FullHealthExtraDamage) - (enemy.defense + enemy.tempDefense));
+                }
+
+                if (player.gof) {
+                    let damageMod = Math.random() + 0.5;
+                    damage *= damageMod;
+                }
+
+                if (Math.random() < player.critChance) {
+                    damage *= 2
+                    critBonusText = " (Crit!)"
+                }
+                // </Damage Mods - Positive>
 
 
-            // <Post damage calc bonuses>
-            var midasBonusText = ""
-            if (player.midas) {
-                midasBonusText = ` You also got ${Math.round(damage / 2)}G.`
-                player.gold += Math.round(damage / 2);
-            }
-            // </Post damage calc bonuses>
+                // <Damage Mods - Negative>
+                if (player.midas) {
+                    damage *= 0.9
+                }
+                // </Damage Mods - Negative>  
 
 
-            enemy.health -= damage;
-            log(`You dealt ${damage} damage to the ${enemy.type}${critBonusText}.${midasBonusText}`);
+                damage = Math.round(damage);
 
-            if (enemy.health <= 0) {
-                log(`You defeated the ${enemy.type}!`);
-                player.experience += enemy.experience;
-                player.gold += enemy.gold;
-                log(`You gained ${enemy.experience} EXP and ${enemy.gold} gold!`);
-                checkLevelUp();
-                currentEnemies.splice(selectedEnemy, 1);
 
-                if (currentEnemies.length > 0) {
-                    selectedEnemy = selectedEnemy % currentEnemies.length;
-                    log(`Targeting ${currentEnemies[selectedEnemy].type}.`);
+                // <Post damage calc bonuses>
+                var midasBonusText = ""
+                if (player.midas) {
+                    midasBonusText = ` You also got ${Math.round(damage / 2)}G.`
+                    player.gold += Math.round(damage / 2);
+                }
+                // </Post damage calc bonuses>
+
+
+                enemy.health -= damage;
+                log(`You dealt ${damage} damage to the ${enemy.type}${critBonusText}.${midasBonusText}`);
+
+                if (enemy.health <= 0) {
+                    log(`You defeated the ${enemy.type}!`);
+                    player.experience += enemy.experience;
+                    player.gold += enemy.gold;
+                    log(`You gained ${enemy.experience} EXP and ${enemy.gold} gold!`);
+                    checkLevelUp();
+                    currentEnemies.splice(selectedEnemy, 1);
+
+                    if (currentEnemies.length > 0) {
+                        selectedEnemy = selectedEnemy % currentEnemies.length;
+                        log(`Targeting ${currentEnemies[selectedEnemy].type}.`);
+                    } else {
+                        selectedEnemy = null;
+                    }
+                }
+
+                if (currentEnemies.length === 0) {
+                    nextWave();
                 } else {
-                    selectedEnemy = null;
+                    updateUI();
+                    enemyTurn();
                 }
             }
 
-            if (currentEnemies.length === 0) {
-                nextWave();
-            } else {
+            function defend() {
+                player.tempDefense = 1 + Math.round(player.defense / 5)
+                document.getElementById('defend-btn').disabled = true;
+                log('Nothing will best you! Increase your defense by 20% for the wave.')
+                if (player.stoneIdol) {
+                    log('You get 6 stacks of Stone Skin from the Stone Idol.');
+                    player.stoneSkinStacks += 6;
+                }
                 updateUI();
                 enemyTurn();
             }
-        }
 
-        function defend() {
-            player.tempDefense = 1 + Math.round(player.defense / 5)
-            document.getElementById('defend-btn').disabled = true;
-            log('Nothing will best you! Increase your defense by 20% for the wave.')
-            if (player.stoneIdol) {
-                log('You get 6 stacks of Stone Skin from the Stone Idol.');
-                player.stoneSkinStacks += 6;
+            function bravery() {
+                player.tempAttack = Math.round(player.attack / 2);
+                document.getElementById('bravery-btn').disabled = true;
+                log('Nothing will best you! Increase your attack by 50% for the wave.')
+                updateUI();
+                enemyTurn();
             }
-            updateUI();
-            enemyTurn();
-        }
 
-        function bravery() {
-            player.tempAttack = Math.round(player.attack / 2);
-            document.getElementById('bravery-btn').disabled = true;
-            log('Nothing will best you! Increase your attack by 50% for the wave.')
-            updateUI();
-            enemyTurn();
-        }
-
-        function enemyTurn() {
-            currentEnemies.forEach(enemy => {
-                enemy.tempDefense = 0;  // Reset temporary defense
-                if (enemy.frozenCounter > 0) {
-                    enemy.frozenCounter--;
-                    log(`${enemy.type} is frozen and cannot act!`)
-                    updateUI();
-                    return
-                }
-
-                if (Math.random() < 0.3) {  // 30% chance to use special attack
-                    const result = enemy.specialAttack.execute(enemy, currentEnemies);
-                    if (typeof result === 'string') {
-                        log(result);
-                    } else {
-                        const damage = Math.max(0, result.damage - (player.defense + player.tempDefense));
-                        player.health -= damage;
-                        log(result.message);
-                        log(`You took ${damage} damage from the ${enemy.type}'s special attack.`);
+            function enemyTurn() {
+                currentEnemies.forEach(enemy => {
+                    enemy.tempDefense = 0;  // Reset temporary defense
+                    if (enemy.frozenCounter > 0) {
+                        enemy.frozenCounter--;
+                        log(`${enemy.type} is frozen and cannot act!`)
+                        updateUI();
+                        return
                     }
+
+                    if (Math.random() < 0.3) {  // 30% chance to use special attack
+                        const result = enemy.specialAttack.execute(enemy, currentEnemies);
+                        if (typeof result === 'string') {
+                            log(result);
+                        } else {
+                            const damage = Math.max(0, result.damage - (player.defense + player.tempDefense));
+                            player.health -= damage;
+                            log(result.message);
+                            log(`You took ${damage} damage from the ${enemy.type}'s special attack.`);
+                        }
+                    } else {
+                        const damage = Math.max(0, enemy.attack - (player.defense + player.tempDefense + player.stoneSkinStacks));
+                        player.health -= damage;
+                        log(`The ${enemy.type} dealt ${damage} damage to you.`);
+                    }
+                });
+
+                if (player.health <= 0) {
+                    gameOver();
                 } else {
-                    const damage = Math.max(0, enemy.attack - (player.defense + player.tempDefense + player.stoneSkinStacks));
-                    player.health -= damage;
-                    log(`The ${enemy.type} dealt ${damage} damage to you.`);
+                    updateUI();
                 }
-            });
+            }
 
-            if (player.health <= 0) {
-                gameOver();
-            } else {
+            function acquireArtifact() {
+                const artifactKeys = Object.keys(artifacts);
+                const availableArtifacts = artifactKeys.filter(key =>
+                    !player.artifacts.includes(artifacts[key]) &&
+                    !player.banishedArtifacts.includes(artifacts[key])
+                );
+
+                if (availableArtifacts.length === 0) {
+                    log("You already have all available artifacts or they have been banished.");
+                    return;
+                }
+
+                const randomArtifactKey = availableArtifacts[Math.floor(Math.random() * availableArtifacts.length)];
+                const randomArtifact = artifacts[randomArtifactKey];
+
+                player.artifacts.push(randomArtifact);
+                log(`You found an artifact: ${randomArtifactKey}\n${randomArtifact.description}`);
+                if (randomArtifact.onGet) {
+                    randomArtifact.onGet(); // Apply artifact effect if defined
+                }
                 updateUI();
             }
-        }
 
-        function acquireArtifact() {
-            const artifactKeys = Object.keys(artifacts);
-            const availableArtifacts = artifactKeys.filter(key =>
-                !player.artifacts.includes(artifacts[key]) &&
-                !player.banishedArtifacts.includes(artifacts[key])
-            );
 
-            if (availableArtifacts.length === 0) {
-                log("You already have all available artifacts or they have been banished.");
-                return;
+
+            function nextWave() {
+                if (currentWave % 5 === 0) {
+                    acquireArtifact();
+                }
+                currentWave++;
+                player.stoneSkinStacks = 0;
+                player.tempAttack = 0;
+                document.getElementById('bravery-btn').disabled = false;
+                player.tempDefense = 0;
+                document.getElementById('defend-btn').disabled = false;
+                statMod = parseFloat((statMod * 1.05).toFixed(2));
+                log(`Wave ${currentWave} begins! Enemy stats increased by 5%.`);
+                clearLog();
+                generateEnemies();
+                updateUI();
+                log(`Targeting ${currentEnemies[selectedEnemy].type}.`);
             }
 
-            const randomArtifactKey = availableArtifacts[Math.floor(Math.random() * availableArtifacts.length)];
-            const randomArtifact = artifacts[randomArtifactKey];
-
-            player.artifacts.push(randomArtifact);
-            log(`You found an artifact: ${randomArtifactKey}\n${randomArtifact.description}`);
-            if (randomArtifact.onGet) {
-                randomArtifact.onGet(); // Apply artifact effect if defined
+            function gameOver() {
+                updateUI();
+                log('Game Over! You were defeated.');
+                document.getElementById('attack-btn').disabled = true;
+                document.getElementById('defend-btn').disabled = true;
+                document.getElementById('bravery-btn').disabled = true;
+                document.getElementById('buy-potion').disabled = true;
+                document.getElementById('use-potion').disabled = true;
+                log('Press the "New Game" button to start a new run.');
+                const newGameBtn = document.createElement('button');
+                newGameBtn.textContent = 'New Game';
+                newGameBtn.onclick = newGame;
+                document.getElementById('action-buttons').appendChild(newGameBtn);
             }
-            updateUI();
-        }
 
-
-
-        function nextWave() {
-            if (currentWave % 5 === 0) {
-                acquireArtifact();
+            function newGame() {
+                player = { ...defaults };
+                currentWave = 1;
+                statMod = 1;
+                potionPrice = 10;
+                document.getElementById('attack-btn').disabled = false;
+                document.getElementById('defend-btn').disabled = false;
+                document.getElementById('bravery-btn').disabled = false;
+                document.getElementById('buy-potion').disabled = false;
+                document.getElementById('use-potion').disabled = false;
+                const newGameBtn = document.querySelector('button:last-child');
+                if (newGameBtn.textContent === 'New Game') {
+                    newGameBtn.remove();
+                }
+                clearLog();
+                generateEnemies();
+                updateUI();
+                log('A new adventure begins!');
+                log(`Targeting ${currentEnemies[selectedEnemy].type}.`);
             }
-            currentWave++;
-            player.stoneSkinStacks = 0;
-            player.tempAttack = 0;
-            document.getElementById('bravery-btn').disabled = false;
-            player.tempDefense = 0;
-            document.getElementById('defend-btn').disabled = false;
-            statMod = parseFloat((statMod * 1.05).toFixed(2));
-            log(`Wave ${currentWave} begins! Enemy stats increased by 5%.`);
-            clearLog();
+
+
+            function checkLevelUp() {
+                const expToNextLevel = player.level * 20;
+                if (player.experience >= expToNextLevel) {
+                    player.level++;
+                    player.experience -= expToNextLevel;
+                    player.maxHealth += 2 * player.level;
+                    player.health += 2 * player.level;
+                    player.defense += Math.max(1, (1 * player.level - 5));
+                    player.defense += Math.max(1, (1 * player.level - 25));
+                    log(`Level up! You are now level ${player.level}!`);
+                    log('Your stats have increased!');
+                }
+            }
+
+            function buyPotion() {
+                if (player.gold >= potionPrice) {
+                    player.gold -= potionPrice;
+                    player.potions++;
+                    potionPrice += 25
+                    log('You bought a Healing Potion!');
+                    updateUI();
+                } else {
+                    log('Not enough gold to buy a potion.');
+                }
+            }
+
+            function usePotion() {
+                if (player.potions > 0) {
+                    player.potions--;
+                    const healAmount = Math.floor(player.maxHealth * 0.3);
+                    player.health = Math.min(player.health + healAmount, player.maxHealth);
+                    log(`You used a Healing Potion and recovered ${healAmount} HP!`);
+                    updateUI();
+                } else {
+                    log('You have no Healing Potions to use.');
+                }
+            }
+
+            function log(message) {
+                const gameLog = document.getElementById('game-log');
+                gameLog.innerHTML += message + '<br>';
+                gameLog.scrollTop = gameLog.scrollHeight;
+            }
+
+            function clearLog() {
+                document.getElementById('game-log').innerHTML = '';
+            }
+
+            document.getElementById('attack-btn').onclick = attack;
+            document.getElementById('bravery-btn').onclick = bravery;
+            document.getElementById('defend-btn').onclick = defend;
+            document.getElementById('buy-potion').onclick = buyPotion;
+            document.getElementById('use-potion').onclick = usePotion;
+
+            // Initialize the game
             generateEnemies();
             updateUI();
+            log('The battle begins!');
             log(`Targeting ${currentEnemies[selectedEnemy].type}.`);
-        }
 
-        function gameOver() {
-            updateUI();
-            log('Game Over! You were defeated.');
-            document.getElementById('attack-btn').disabled = true;
-            document.getElementById('defend-btn').disabled = true;
-            document.getElementById('bravery-btn').disabled = true;
-            document.getElementById('buy-potion').disabled = true;
-            document.getElementById('use-potion').disabled = true;
-            log('Press the "New Game" button to start a new run.');
-            const newGameBtn = document.createElement('button');
-            newGameBtn.textContent = 'New Game';
-            newGameBtn.onclick = newGame;
-            document.getElementById('action-buttons').appendChild(newGameBtn);
-        }
-
-        function newGame() {
-            player = { ...defaults };
-            currentWave = 1;
-            statMod = 1;
-            potionPrice = 10;
-            document.getElementById('attack-btn').disabled = false;
-            document.getElementById('defend-btn').disabled = false;
-            document.getElementById('bravery-btn').disabled = false;
-            document.getElementById('buy-potion').disabled = false;
-            document.getElementById('use-potion').disabled = false;
-            const newGameBtn = document.querySelector('button:last-child');
-            if (newGameBtn.textContent === 'New Game') {
-                newGameBtn.remove();
+            // script.js
+            function checkOrientation() {
+                const rotateMessage = document.getElementById('rotate-message');
+                if (window.innerHeight > window.innerWidth) {
+                    // Portrait mode
+                    rotateMessage.style.display = 'flex';
+                } else {
+                    // Landscape mode
+                    rotateMessage.style.display = 'none';
+                }
             }
-            clearLog();
-            generateEnemies();
-            updateUI();
-            log('A new adventure begins!');
-            log(`Targeting ${currentEnemies[selectedEnemy].type}.`);
-        }
 
-
-        function checkLevelUp() {
-            const expToNextLevel = player.level * 20;
-            if (player.experience >= expToNextLevel) {
-                player.level++;
-                player.experience -= expToNextLevel;
-                player.maxHealth += 2 * player.level;
-                player.health += 2 * player.level;
-                player.defense += Math.max(1, (1 * player.level - 5));
-                player.defense += Math.max(1, (1 * player.level - 25));
-                log(`Level up! You are now level ${player.level}!`);
-                log('Your stats have increased!');
-            }
-        }
-
-        function buyPotion() {
-            if (player.gold >= potionPrice) {
-                player.gold -= potionPrice;
-                player.potions++;
-                potionPrice += 25
-                log('You bought a Healing Potion!');
-                updateUI();
-            } else {
-                log('Not enough gold to buy a potion.');
-            }
-        }
-
-        function usePotion() {
-            if (player.potions > 0) {
-                player.potions--;
-                const healAmount = Math.floor(player.maxHealth * 0.3);
-                player.health = Math.min(player.health + healAmount, player.maxHealth);
-                log(`You used a Healing Potion and recovered ${healAmount} HP!`);
-                updateUI();
-            } else {
-                log('You have no Healing Potions to use.');
-            }
-        }
-
-        function log(message) {
-            const gameLog = document.getElementById('game-log');
-            gameLog.innerHTML += message + '<br>';
-            gameLog.scrollTop = gameLog.scrollHeight;
-        }
-
-        function clearLog() {
-            document.getElementById('game-log').innerHTML = '';
-        }
-
-        document.getElementById('attack-btn').onclick = attack;
-        document.getElementById('bravery-btn').onclick = bravery;
-        document.getElementById('defend-btn').onclick = defend;
-        document.getElementById('buy-potion').onclick = buyPotion;
-        document.getElementById('use-potion').onclick = usePotion;
-
-        // Initialize the game
-        generateEnemies();
-        updateUI();
-        log('The battle begins!');
-        log(`Targeting ${currentEnemies[selectedEnemy].type}.`);
-    </script>
-</body>
+            // Check the orientation on load and when resizing
+            window.addEventListener('load', checkOrientation);
+            window.addEventListener('resize', checkOrientation);
+        </script>
+    </body>
 
 </html>
