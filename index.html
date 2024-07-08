@@ -26,13 +26,106 @@
 
         #game-container {
             background-color: #2b2b2b;
-            padding: 100px;
+            padding: 2vh;
             border-radius: 12px;
             box-shadow: 0 4px 20px rgba(255, 255, 255, 0.1);
             width: 80%;
-            max-width: 2000px;
-            height: 90%;
+            max-width: 1000px;
+            height: 95vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        #wave-title {
+            font-size: 2.5vh;
+            margin-bottom: 1vh;
+        }
+
+        #enemy-container {
+            display: flex;
+            justify-content: space-around;
+            width: 100%;
+            margin-bottom: 2vh;
+            flex-grow: 1;
+        }
+
+        #player-container {
+            width: 100%;
+            display: flex;
+            justify-content: center;
+            margin-top: 2vh;
+            flex-grow: 1;
+        }
+
+        .enemy,
+        #player-stats {
+            border: 1px solid #555;
+            padding: 2vh;
+            border-radius: 8px;
+            font-size: 2vh;
+        }
+
+        #action-buttons {
+            display: flex;
+            justify-content: center;
+            width: 100%;
+            margin: 2vh 0;
+        }
+
+        #action-buttons button {
+            font-size: 1.8vh;
+            padding: 1vh 2vh;
+        }
+
+        #game-log {
+            font-size: 1.4vh;
+            margin-top: 1vh;
+            padding: 1vh;
+            border: 1px solid #555;
+            border-radius: 8px;
+            background-color: #333;
+            height: 12vh;
             overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+        }
+
+        #bottom-section {
+            display: flex;
+            flex-direction: column;
+            height: 30vh;
+        }
+
+        #shop-inventory-container {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 1vh;
+            height: 100%;
+        }
+
+        #shop,
+        #inventory,
+        #artifacts {
+            font-size: 1.6vh;
+            padding: 1vh;
+            border: 1px solid #555;
+            border-radius: 8px;
+            background-color: #333;
+            overflow-y: auto;
+            width: 48%;
+            /* Slightly less than 50% to account for margin */
+        }
+
+        h2 {
+            font-size: 2vh;
+            margin: 0.5vh 0;
+        }
+
+        button {
+            font-size: 1.6vh;
+            padding: 0.8vh 1.6vh;
+            margin: 0.5vh;
         }
 
         #rotate-message {
@@ -52,75 +145,13 @@
             z-index: 1000;
         }
 
-        h1,
-        h2 {
-            margin: 0 0 20px;
-            font-weight: 300;
-            letter-spacing: 1px;
-        }
-
-        #enemy-container {
-            display: flex;
-            justify-content: space-around;
-            width: 100%;
-            margin-bottom: 20px;
-        }
-
-        #player-container {
-            width: 100%;
-            display: flex;
-            justify-content: center;
-            margin-top: 20px;
-        }
-
-        .enemy,
-        #player-stats {
-            border: 1px solid #555;
-            padding: 15px;
-            border-radius: 8px;
-            cursor: pointer;
-            transition: background-color 0.5s, transform 0.3s;
-        }
-
         .enemy.selected {
             background-color: #444;
             transform: scale(1.05);
         }
 
-        button {
-            margin: 10px 5px;
-            padding: 10px 20px;
-            font-size: 14px;
-            font-weight: 600;
-            letter-spacing: 1px;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-            transition: background-color 0.3s, color 0.3s, box-shadow 0.3s;
-        }
-
         button:hover {
             box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-        }
-
-        #game-log {
-            max-height: 150px;
-            overflow-y: auto;
-            border: 1px solid #555;
-            padding: 15px;
-            border-radius: 8px;
-            margin-top: 20px;
-            background-color: #333;
-        }
-
-        #shop,
-        #artifacts,
-        #inventory {
-            margin-top: 20px;
-            padding: 15px;
-            border: 1px solid #555;
-            border-radius: 8px;
-            background-color: #333;
         }
 
         .tooltip {
@@ -167,16 +198,21 @@
                 <button id="bravery-btn">Bravery</button>
             </div>
             <div id="game-log"></div>
-            <div id="shop">
-                <h2>Shop</h2>
-                <button id="buy-potion">Buy Healing Potion (10 gold)</button>
-            </div>
-            <div id="inventory">
-                <h2>Inventory</h2>
-                <button id="use-potion">Use Healing Potion</button>
-            </div>
-            <div id="artifacts">
-                <h2>Artifacts Obtained</h2>
+            <div id="bottom-section">
+                <div id="shop-inventory-container">
+                    <div id="shop">
+                        <h2>Shop</h2>
+                        <div id="shop-items"></div>
+                    </div>
+
+                    <div id="inventory">
+                        <h2>Inventory</h2>
+                        <div id="inventory-items"></div>
+                    </div>
+                    <div id="artifacts">
+                        <h2>Artifacts Obtained</h2>
+                    </div>
+                </div>
             </div>
 
         </div>
@@ -192,7 +228,7 @@
                 level: 1,
                 experience: 0,
                 gold: 0,
-                potions: 0,
+                inventory: {},
                 FullHealthExtraDamage: 1,
                 critChance: 0,
                 gof: false,
@@ -215,7 +251,7 @@
                 level: 1,
                 experience: 0,
                 gold: 0,
-                potions: 0,
+                inventory: {},
                 FullHealthExtraDamage: 1,
                 critChance: 0,
                 gof: false,
@@ -340,6 +376,20 @@
                     tooltipSpan.textContent = tooltipText;
                 }
             });
+
+            const items = {
+                potion: {
+                    name: 'Healing Potion',
+                    price: 10,
+                    initialPrice: 10,
+                    priceUpdate: 25,
+                    onUse: function () {
+                        const healAmount = Math.floor(player.maxHealth * 0.25);
+                        player.health = Math.min(player.health + healAmount, player.maxHealth);
+                        log(`You used a ${this.name} and recovered ${healAmount} HP!`);
+                    }
+                }
+            };
 
             const enemyTypes = {
                 Slime: {
@@ -517,9 +567,6 @@
                 };
             }
 
-
-
-
             function updateUI() {
                 // Update player stats display
                 document.getElementById('player-stats').innerHTML = `
@@ -547,15 +594,16 @@
                     enemyContainer.appendChild(enemyElement);
                 });
 
-                // Update potion buttons
-                document.getElementById('buy-potion').innerHTML = `Buy Healing Potion (${potionPrice}G)`;
-                document.getElementById('use-potion').innerHTML = `Healing Potion (${player.potions})`;
-
                 // Update wave title
                 const waveTitle = document.getElementById('wave-title');
                 waveTitle.textContent = `Wave ${currentWave}`;
 
-                // Update artifacts display
+                updateArtifacts();
+                updateInventory();
+                updateShop();
+            }
+
+            function updateArtifacts() {
                 const artifactsContainer = document.getElementById('artifacts');
                 artifactsContainer.innerHTML = `<h2>Artifacts Obtained</h2>`;
 
@@ -571,9 +619,61 @@
             </div>`;
                     }).join('');
                     artifactsContainer.innerHTML += artifactList;
+                }}
+
+            function updateShop() {
+                const shopItemsDiv = document.getElementById('shop-items');
+                shopItemsDiv.innerHTML = '';
+
+                for (const [key, item] of Object.entries(items)) {
+                    if (item.price !== undefined) {
+                        const button = document.createElement('button');
+                        button.textContent = `Buy ${item.name} (${item.price} gold)`;
+                        button.onclick = () => buyItem(key);
+                        shopItemsDiv.appendChild(button);
+                    }
                 }
             }
 
+            function updateInventory() {
+                const inventoryItemsDiv = document.getElementById('inventory-items');
+                inventoryItemsDiv.innerHTML = '';
+
+                for (const [key, count] of Object.entries(player.inventory)) {
+                    if (count > 0) {
+                        const button = document.createElement('button');
+                        button.textContent = `Use ${items[key].name} (${count} left)`;
+                        button.onclick = () => useItem(key);
+                        inventoryItemsDiv.appendChild(button);
+                    }
+                }
+            }
+
+            function buyItem(itemKey) {
+                const item = items[itemKey];
+                if (player.gold >= item.price) {
+                    player.gold -= item.price;
+                    player.inventory[itemKey] = (player.inventory[itemKey] || 0) + 1;
+                    item.price += item.priceUpdate || 0;
+                    log(`You bought a ${item.name}!`);
+                    updateShop();
+                    updateInventory();
+                    updateUI();
+                } else {
+                    log('Not enough gold to buy this item.');
+                }
+            }
+
+            function useItem(itemKey) {
+                if (player.inventory[itemKey] > 0) {
+                    player.inventory[itemKey]--;
+                    items[itemKey].onUse();
+                    updateInventory();
+                    updateUI();
+                } else {
+                    log(`You have no ${items[itemKey].name}s to use.`);
+                }
+            }
 
             function discardArtifact(index) {
                 const artifact = player.artifacts[index];
@@ -810,8 +910,11 @@
                 document.getElementById('attack-btn').disabled = true;
                 document.getElementById('defend-btn').disabled = true;
                 document.getElementById('bravery-btn').disabled = true;
-                document.getElementById('buy-potion').disabled = true;
-                document.getElementById('use-potion').disabled = true;
+
+                // Disable item buttons
+                document.querySelectorAll('#shop-items button').forEach(button => button.disabled = true);
+                document.querySelectorAll('#inventory-items button').forEach(button => button.disabled = true);
+
                 log('Press the "New Game" button to start a new run.');
                 const newGameBtn = document.createElement('button');
                 newGameBtn.textContent = 'New Game';
@@ -824,11 +927,24 @@
                 currentWave = 1;
                 statMod = 1;
                 potionPrice = 10;
+
+                // Reset item prices
+                for (const key in items) {
+                    items[key].price = items[key].initialPrice;
+                }
+
+                // Reset player's inventory
+                for (const key in player.inventory) {
+                    player.inventory[key] = 0;
+                }
                 document.getElementById('attack-btn').disabled = false;
                 document.getElementById('defend-btn').disabled = false;
                 document.getElementById('bravery-btn').disabled = false;
-                document.getElementById('buy-potion').disabled = false;
-                document.getElementById('use-potion').disabled = false;
+
+                // Re-enable item buttons
+                updateShop();
+                updateInventory();
+
                 const newGameBtn = document.querySelector('button:last-child');
                 if (newGameBtn.textContent === 'New Game') {
                     newGameBtn.remove();
@@ -855,30 +971,6 @@
                 }
             }
 
-            function buyPotion() {
-                if (player.gold >= potionPrice) {
-                    player.gold -= potionPrice;
-                    player.potions++;
-                    potionPrice += 25
-                    log('You bought a Healing Potion!');
-                    updateUI();
-                } else {
-                    log('Not enough gold to buy a potion.');
-                }
-            }
-
-            function usePotion() {
-                if (player.potions > 0) {
-                    player.potions--;
-                    const healAmount = Math.floor(player.maxHealth * 0.3);
-                    player.health = Math.min(player.health + healAmount, player.maxHealth);
-                    log(`You used a Healing Potion and recovered ${healAmount} HP!`);
-                    updateUI();
-                } else {
-                    log('You have no Healing Potions to use.');
-                }
-            }
-
             function log(message) {
                 const gameLog = document.getElementById('game-log');
                 gameLog.innerHTML += message + '<br>';
@@ -892,8 +984,6 @@
             document.getElementById('attack-btn').onclick = attack;
             document.getElementById('bravery-btn').onclick = bravery;
             document.getElementById('defend-btn').onclick = defend;
-            document.getElementById('buy-potion').onclick = buyPotion;
-            document.getElementById('use-potion').onclick = usePotion;
 
             // Initialize the game
             generateEnemies();
