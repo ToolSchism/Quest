@@ -38,12 +38,19 @@
         #enemy-container {
             display: flex;
             justify-content: space-around;
-            margin-bottom: 5px;
-            min-height: 90px;
-            /* Set a minimum height */
+            width: 100%;
+            margin-bottom: 20px;
         }
 
-        .enemy {
+        #player-container {
+            width: 100%;
+            display: flex;
+            justify-content: center;
+            margin-top: 20px;
+        }
+
+        .enemy,
+        #player-stats {
             border: 1px solid #555;
             padding: 15px;
             border-radius: 8px;
@@ -95,7 +102,7 @@
         .tooltip {
             position: relative;
             display: inline-block;
-            border-bottom: 1px dotted black;
+            border-bottom: 3px dotted black;
             /* Add dotted border bottom */
         }
 
@@ -126,8 +133,10 @@
 <body>
     <div id="game-container">
         <h1 id="wave-title">Wave 1</h1>
-        <div id="player-stats"></div>
         <div id="enemy-container"></div>
+        <div id="player-container">
+            <div id="player-stats"></div>
+        </div>
         <div id="action-buttons">
             <button id="attack-btn">Attack</button>
             <button id="defend-btn">Defend</button>
@@ -149,7 +158,7 @@
     </div>
 
     <script>
-        const player = {
+        let player = {
             maxHealth: 50,
             health: 50,
             attack: 5,
@@ -163,9 +172,36 @@
             FullHealthExtraDamage: 1,
             critChance: 0,
             gof: false,
-            stoneIdol: true,
+            stoneIdol: false,
+            shatterImbue: false,
+            weaknessImbue: false,
+            iceCharm: false,
             stoneSkinStacks: 0,
-            artifacts: []
+            artifacts: [],
+            banishedArtifacts: []
+        };
+
+        const defaults = {
+            maxHealth: 50,
+            health: 50,
+            attack: 5,
+            defense: 0,
+            tempDefense: 0,
+            tempAttack: 0,
+            level: 1,
+            experience: 0,
+            gold: 0,
+            potions: 0,
+            FullHealthExtraDamage: 1,
+            critChance: 0,
+            gof: false,
+            stoneIdol: false,
+            shatterImbue: false,
+            weaknessImbue: false,
+            iceCharm: false,
+            stoneSkinStacks: 0,
+            artifacts: [],
+            banishedArtifacts: []
         };
 
         const artifacts = {
@@ -173,32 +209,75 @@
                 description: "/Healthy/ enemies take 50% more damage.",
                 onGet: function () {
                     player.FullHealthExtraDamage += 0.5;
+                },
+                onDiscard: function () {
+                    player.FullHealthExtraDamage -= 0.5;
                 }
             },
             "Gauntlets of Fate": {
-                description: "WE LOVE RNG!!\nDamage dealt is 50% to 150% of it's original value.",
+                description: "WE LOVE RNG!!\nDamage dealt is 50% to 150% of its original value.",
                 onGet: function () {
                     player.gof = true;
+                },
+                onDiscard: function () {
+                    player.gof = false;
                 }
             },
             "Robotic Eye": {
                 description: "Grants 10% /crit/ chance.",
                 onGet: function () {
                     player.critChance += 10;
+                },
+                onDiscard: function () {
+                    player.critChance -= 10;
                 }
             },
             "Stone Idol": {
                 description: "Defending gives you 6 stacks of /Stone Skin/.",
                 onGet: function () {
                     player.stoneIdol = true;
+                },
+                onDiscard: function () {
+                    player.stoneIdol = false;
+                }
+            },
+            "Imbuement of Shattering": {
+                description: "33% chance on hit to inflict /Shattered/.",
+                onGet: function () {
+                    player.shatterImbue = true;
+                },
+                onDiscard: function () {
+                    player.shatterImbue = false;
+                }
+            },
+            "Imbuement of Weakness": {
+                description: "33% chance on hit to inflict /Weakness/.",
+                onGet: function () {
+                    player.weaknessImbue = true;
+                },
+                onDiscard: function () {
+                    player.weaknessImbue = false;
+                }
+            },
+            "Ice Charm": {
+                description: "15% chance on hit to /Freeze/ the target for 3 turns.",
+                onGet: function () {
+                    player.iceCharm = true;
+                },
+                onDiscard: function () {
+                    player.iceCharm = false;
                 }
             }
         };
 
+
         const translator = {
             "Stone Skin": "Reduces incoming damage by 1 per stack. Stacks reset at the end of the wave.",
             "Healthy": "Being at full health grants you the Healthy state.",
-            "crit": "Crits aka Critical Hits deal twice the damage of a regular hit."
+            "crit": "Crits aka Critical Hits deal twice the damage of a regular hit.",
+            "Weakness": "Reduces attack by 20%.",
+            "Shattered": "Reduces defense to 0.",
+            "Freeze": "Entirely unable to act while in this state."
         };
 
         // Function to show tooltip
@@ -321,7 +400,10 @@
                 attack: Math.round(baseStats.attack * statMod),
                 defense: Math.round(baseStats.defense * statMod),
                 type,
-                tempDefense: 0
+                tempDefense: 0,
+                shattered: false,
+                weakness: false,
+                frozenCounter: 0,
             };
         }
 
@@ -380,11 +462,36 @@
             if (player.artifacts.length === 0) {
                 artifactsContainer.innerHTML += `<p>No artifacts obtained yet.</p>`;
             } else {
-                const artifactList = player.artifacts.map(artifact => {
-                    return `<p><strong>${Object.keys(artifacts).find(key => artifacts[key] === artifact)}</strong><br>${addTooltip(artifact.description)}</p>`;
+                const artifactList = player.artifacts.map((artifact, index) => {
+                    const artifactKey = Object.keys(artifacts).find(key => artifacts[key] === artifact);
+                    return `<div class="artifact">
+                <p><strong>${artifactKey}</strong><br>${addTooltip(artifact.description)}</p>
+                <button onclick="discardArtifact(${index})">Discard</button>
+                <button onclick="banishArtifact(${index})">Banish</button>
+            </div>`;
                 }).join('');
                 artifactsContainer.innerHTML += artifactList;
             }
+        }
+
+
+        function discardArtifact(index) {
+            const artifact = player.artifacts[index];
+            if (artifact.onDiscard) {
+                artifact.onDiscard(); // Apply discard effect if defined
+            }
+            player.artifacts.splice(index, 1); // Remove artifact from artifacts array
+            updateUI();
+        }
+
+        function banishArtifact(index) {
+            const artifact = player.artifacts[index];
+            if (artifact.onDiscard) {
+                artifact.onDiscard(); // Apply discard effect if defined
+            }
+            player.artifacts.splice(index, 1); // Remove artifact from artifacts array
+            player.banishedArtifacts.push(artifact); // Add artifact to banished artifacts
+            updateUI();
         }
 
         // Function to add tooltips based on defined terms
@@ -414,6 +521,24 @@
 
             const enemy = currentEnemies[selectedEnemy];
             let damage = Math.max(0, (player.attack + player.tempAttack) - (enemy.defense + enemy.tempDefense));
+            let critBonusText = "";
+
+            if (player.shatterImbue && Math.random() < 0.33 && enemy.shattered == false) {
+                enemy.shattered = true;
+                enemy.defense = 0;
+                log(`${enemy.type} has been inflicted with Shattered!`);
+            }
+
+            if (player.weaknessImbue && Math.random() < 0.33 && enemy.weakness == false) {
+                enemy.weakness = true
+                enemy.attack = Math.round(enemy.attack * 0.8);
+                log(`${enemy.type} has been inflicted with Weakness!`);
+            }
+
+            if (player.iceCharm && Math.random() < 0.15 && enemy.frozenCounter == 0) {
+                enemy.frozenCounter == 3
+                log(`${enemy.type} has been frozen solid!`);
+            }
 
             if (enemy.health == enemy.maxHealth) {
                 damage = Math.max(0, ((player.attack + player.tempAttack) * player.FullHealthExtraDamage) - (enemy.defense + enemy.tempDefense));
@@ -424,13 +549,14 @@
                 damage *= damageMod;
             }
 
-            if (Math.random < player.critChance) {
+            if (Math.random() < player.critChance) {
                 damage *= 2
+                critBonusText = " (Crit!)"
             }
 
             damage = Math.round(damage);
             enemy.health -= damage;
-            log(`You dealt ${damage} damage to the ${enemy.type}.`);
+            log(`You dealt ${damage} damage to the ${enemy.type}${critBonusText}.`);
 
             if (enemy.health <= 0) {
                 log(`You defeated the ${enemy.type}!`);
@@ -451,6 +577,7 @@
             if (currentEnemies.length === 0) {
                 nextWave();
             } else {
+                updateUI();
                 enemyTurn();
             }
         }
@@ -478,6 +605,13 @@
         function enemyTurn() {
             currentEnemies.forEach(enemy => {
                 enemy.tempDefense = 0;  // Reset temporary defense
+                if (enemy.frozenCounter > 0) {
+                    enemy.frozenCounter--;
+                    log(`${enemy.type} is frozen and cannot act!`)
+                    updateUI();
+                    return
+                }
+
                 if (Math.random() < 0.3) {  // 30% chance to use special attack
                     const result = enemy.specialAttack.execute(enemy, currentEnemies);
                     if (typeof result === 'string') {
@@ -504,10 +638,13 @@
 
         function acquireArtifact() {
             const artifactKeys = Object.keys(artifacts);
-            const availableArtifacts = artifactKeys.filter(key => !player.artifacts.includes(artifacts[key]));
+            const availableArtifacts = artifactKeys.filter(key =>
+                !player.artifacts.includes(artifacts[key]) &&
+                !player.banishedArtifacts.includes(artifacts[key])
+            );
 
             if (availableArtifacts.length === 0) {
-                log("You already have all available artifacts.");
+                log("You already have all available artifacts or they have been banished.");
                 return;
             }
 
@@ -521,6 +658,7 @@
             }
             updateUI();
         }
+
 
 
         function nextWave() {
@@ -557,15 +695,7 @@
         }
 
         function newGame() {
-            player.maxHealth = 50;
-            player.health = 50;
-            player.attack = 5;
-            player.defense = 0;
-            player.tempDefense = 0;
-            player.level = 1;
-            player.experience = 0;
-            player.gold = 0;
-            player.potions = 0;
+            player = { ...defaults };
             currentWave = 1;
             statMod = 1;
             potionPrice = 10;
@@ -584,6 +714,7 @@
             log('A new adventure begins!');
             log(`Targeting ${currentEnemies[selectedEnemy].type}.`);
         }
+
 
         function checkLevelUp() {
             const expToNextLevel = player.level * 20;
