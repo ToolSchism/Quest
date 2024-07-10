@@ -1,0 +1,82 @@
+{
+    "Executioner's Hood": {
+        "description": "/Healthy/ enemies take 50% more damage.",
+        "onGet": "player.FullHealthExtraDamage += 0.5;",
+        "onDiscard": "player.FullHealthExtraDamage -= 0.5;"
+    },
+    "Gauntlets of Fate": {
+        "description": "Damage dealt is 50% to 150% of its original value.",
+        "onGet": "player.gof = true;",
+        "onDiscard": "player.gof = false;"
+    },
+    "Robotic Eye": {
+        "description": "Grants 10% /crit/ chance.",
+        "onGet": "player.critChance += 0.1;",
+        "onDiscard": "player.critChance -= 0.1;"
+    },
+    "Stone Idol": {
+        "description": "Defending gives you 6 stacks of /Stone Skin/.",
+        "onGet": "player.stoneIdol = true;",
+        "onDiscard": "player.stoneIdol = false;"
+    },
+    "Imbuement of Shattering": {
+        "description": "33% chance on hit to inflict /Shattered/.",
+        "onGet": "player.shatterImbue = true;",
+        "onDiscard": "player.shatterImbue = false;"
+    },
+    "Imbuement of Weakness": {
+        "description": "33% chance on hit to inflict /Weakness/.",
+        "onGet": "player.weaknessImbue = true;",
+        "onDiscard": "player.weaknessImbue = false;"
+    },
+    "Ice Charm": {
+        "description": "15% chance on hit to /Freeze/ the target for 3 turns.",
+        "onGet": "player.iceCharm = true;",
+        "onDiscard": "player.iceCharm = false;"
+    },
+    "Midas Charm": {
+        "description": "Gain the /Midas/ effect.",
+        "onGet": "player.midas = true;",
+        "onDiscard": "player.midas = false;"
+    },
+    "Vampiric Amulet": {
+        "description": "Heal for 10% of the damage dealt to enemies.",
+        "onGet": "player.vampiricHeal = 0.1;",
+        "onDiscard": "player.vampiricHeal = 0;"
+    },
+    "Phoenix Feather": {
+        "description": "Once per wave, if you would die, survive with 1 HP instead.",
+        "onGet": "player.phoenixRevive = true;",
+        "onDiscard": "player.phoenixRevive = false;"
+    },
+    "Berserker's Rage": {
+        "description": "Gain the /berserk/ effect.",
+        "onGet": "player.berserkerRage = true;",
+        "onDiscard": "player.berserkerRage = false;"
+    },
+    "Mirror Shield": {
+        "description": "20% chance to /reflect/.",
+        "onGet": "player.mirrorShieldChance = 0.2;",
+        "onDiscard": "player.mirrorShieldChance = 0;"
+    },
+    "Tome of Knowledge": {
+        "description": "Gain 50% more xp. Shreds of wisdom give 5% more xp instead of 3%.",
+        "onGet": "player.experienceMultiplier += 0.5; player.hasToK = true;",
+        "onDiscard": "player.experienceMultiplier -= 0.5; player.hasToK = false;"
+    },
+    "Flag of War": {
+        "description": "Bravery also gives a temporary 30% /crit/ chance on use.",
+        "onGet": "player.bonusCritChance += 0.30;",
+        "onDiscard": "player.bonusCritChance -= 0.30;"
+    },
+    "Hex of Wither": {
+        "description": "Enemy health is reduced by 5% every turn.",
+        "onGet": "player.wither = 0.05;",
+        "onDiscard": "player.wither = 0;"
+    },
+    "Hex of Age": {
+        "description": "Age your enemies in an instant, decreasing their combat ability (attack and defense) by 3% every turn.",
+        "onGet": "player.age = 0.03;",
+        "onDiscard": "player.age = 0;"
+    }
+}
