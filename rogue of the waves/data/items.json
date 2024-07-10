@@ -1,0 +1,30 @@
+{
+    "potion": {
+        "name": "Healing Potion",
+        "price": 10,
+        "initialPrice": 10,
+        "priceUpdate": 10,
+        "onUse": "const healAmount = Math.floor(player.maxHealth * 0.33); player.health = Math.min(player.health + healAmount, player.maxHealth); log(`You used a ${this.name} and recovered ${healAmount} HP!`);"
+    },
+    "whetstone": {
+        "name": "Whetstone",
+        "price": 50,
+        "initialPrice": 50,
+        "priceUpdate": 50,
+        "onUse": "player.attack += 3; log(`You used the whetstone and gained 3 attack!`);"
+    },
+    "shredOfWisdom": {
+        "name": "Shred of Wisdom",
+        "price": 100,
+        "initialPrice": 100,
+        "priceUpdate": 100,
+        "onUse": "if (player.hasToK) {player.experienceMultiplier += 0.05; log(`The shred of wisdom pops into your subconscious. You feel a little wiser to the world. +5% xp gain.`);} else {player.experienceMultiplier += 0.03; log(`The shred of wisdom pops into your subconscious. You feel a bit wiser to the world. +3% xp gain.`)}"
+    },
+    "tankBrew": {
+        "name": "Tank's Brew",
+        "price": 100,
+        "initialPrice": 100,
+        "priceUpdate": 50,
+        "onUse":"player.maxHealth += 10; player.health += 10; player.defense += 1; log(`You drank the Tank's Brew... it tastes like alcohol. +10hp & +1def`);"
+    }
+}

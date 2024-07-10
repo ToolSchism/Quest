@@ -1,0 +1,94 @@
+{
+    "Slime": {
+        "maxHealth": 7,
+        "health": 7,
+        "attack": 3,
+        "defense": 1,
+        "experience": 8,
+        "gold": 5,
+        "specialAttack": {
+            "name": "Leap",
+            "description": "Charges for one turn, then deals 3x damage",
+            "charge": 0,
+            "execute": "if (this.charge === 0) { this.charge = 1; return `The slime charges kinetic energy for later...`; } else { this.charge = 0; return { damage: enemy.attack * 2, message: `The slime leaps full speed towards you!` }; }"
+        }
+    },
+    "Bat": {
+        "maxHealth": 4,
+        "health": 4,
+        "attack": 7,
+        "defense": 0.5,
+        "experience": 7,
+        "gold": 4,
+        "specialAttack": {
+            "name": "Ultra Shield",
+            "description": "Gain a LOT of defense for the turn.",
+            "execute": "enemy.tempDefense = 99999; return `The bat encases itself in an Ultra Shield! (0 physical damage this turn)`;"
+        }
+    },
+    "Imp": {
+        "maxHealth": 12,
+        "health": 12,
+        "attack": 3,
+        "defense": 2,
+        "experience": 9,
+        "gold": 7,
+        "specialAttack": {
+            "name": "Empower Ally",
+            "description": "Increases a random ally's attack by 1",
+            "execute": "const validTargets = allEnemies.filter(e => e.health > 0); const target = validTargets[Math.floor(Math.random() * validTargets.length)]; target.attack += 1; return `The imp empowers the ${target.type}, increasing its attack!`;"
+        }
+    },
+    "Skeletal Mage": {
+        "maxHealth": 5,
+        "health": 5,
+        "attack": 1,
+        "defense": 0,
+        "experience": 6,
+        "gold": 10,
+        "specialAttack": {
+            "name": "Supercharge",
+            "description": "Heal an ally for 5 health and give them +5 max health as well.",
+            "execute": "const validTargets = allEnemies.filter(e => e.health > 0); const target = validTargets[Math.floor(Math.random() * validTargets.length)]; target.health += 5; target.maxHealth += 5; return `The skeletal mage supercharges ${target.type}! (+5 hp/max hp)`;"
+        }
+    },
+    "Goblin": {
+        "maxHealth": 8,
+        "health": 8,
+        "attack": 4,
+        "defense": 2,
+        "experience": 6,
+        "gold": 8,
+        "specialAttack": {
+            "name": "Sneak Attack",
+            "description": "Deals double damage if the enemy has full health.",
+            "execute": "const damage = player.health === player.maxHealth ? Math.round(enemy.attack * 1.75) : enemy.attack; return { damage, message: `The goblin executes a sneak attack!` };"
+        }
+    },
+    "Troll": {
+        "maxHealth": 20,
+        "health": 20,
+        "attack": 3,
+        "defense": 3,
+        "experience": 14,
+        "gold": 12,
+        "specialAttack": {
+            "name": "Regenerate",
+            "description": "Regains 3 health every turn.",
+            "execute": "enemy.health = Math.min(enemy.maxHealth, enemy.health + 3); return `The troll regenerates some of its health!`;"
+        }
+    },
+    "Dark Sorcerer": {
+        "maxHealth": 10,
+        "health": 10,
+        "attack": 5,
+        "defense": 1,
+        "experience": 8,
+        "gold": 15,
+        "specialAttack": {
+            "name": "Curse",
+            "description": "Removes temporary buffs.",
+            "execute": "player.tempAttack = 0; player.tempDefense = 0; return `The dark sorcerer casts a curse on you, removing bravery and defense!`;"
+        }
+    }
+}

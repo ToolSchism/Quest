@@ -1,0 +1,185 @@
+body {
+    font-family: 'Helvetica Neue', Arial, sans-serif;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    margin: 0;
+    background-color: #1e1e1e;
+    color: #f0f0f0;
+}
+
+#game-container {
+    background-color: #2b2b2b;
+    padding: 2vh;
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(255, 255, 255, 0.1);
+    width: 80%;
+    max-width: 1000px;
+    height: 95vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+#wave-title {
+    font-size: 2.5vh;
+    margin-bottom: 1vh;
+}
+
+#enemy-container {
+    display: flex;
+    justify-content: space-around;
+    width: 100%;
+    margin-bottom: 2vh;
+    flex-grow: 1;
+}
+
+#player-container {
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    margin-top: 2vh;
+    flex-grow: 1;
+}
+
+.enemy,
+#player-stats {
+    border: 1px solid #555;
+    padding: 2vh;
+    border-radius: 8px;
+    font-size: 2vh;
+}
+
+#action-buttons {
+    display: flex;
+    justify-content: center;
+    width: 100%;
+    margin: 2vh 0;
+}
+
+#action-buttons button {
+    font-size: 1.8vh;
+    padding: 1vh 2vh;
+}
+
+#game-log {
+    font-size: 1.4vh;
+    margin-top: 1vh;
+    padding: 1vh;
+    border: 1px solid #555;
+    border-radius: 8px;
+    background-color: #333;
+    height: 12vh;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+}
+
+#bottom-section {
+    display: flex;
+    flex-direction: column;
+    height: 30vh;
+}
+
+#shop-inventory-container {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 1vh;
+    height: 100%;
+    overflow-x: hidden;
+    overflow-y: auto;
+}
+
+#shop,
+#inventory,
+#artifacts {
+    font-size: 1.6vh;
+    padding: 1vh;
+    border: 1px solid #555;
+    border-radius: 8px;
+    width: 48%;
+    background-color: #333;
+    overflow-y: auto;
+    overflow-x: hidden;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+}
+
+#shop-items,
+#inventory-items {
+    overflow-x: hidden;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
+}
+
+#shop h2,
+#inventory h2,
+#artifacts h2 {
+    text-align: center;
+    width: 100%;
+}
+
+#shop button,
+#inventory button,
+#artifacts button,
+#shop-items > *,
+#inventory-items > *,
+#artifacts > * {
+    margin-left: auto;
+    margin-right: auto;
+    display: block;
+}
+
+h2 {
+    font-size: 2vh;
+    margin: 0.5vh 0;
+}
+
+button {
+    font-size: 1.6vh;
+    padding: 0.8vh 1.6vh;
+    margin: 0.5vh;
+}
+
+.enemy.selected {
+    background-color: #444;
+    transform: scale(1.05);
+}
+
+button:hover {
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+}
+
+.tooltip {
+    position: relative;
+    display: inline-block;
+    border-bottom: 3px dotted black;
+}
+
+.tooltip .tooltiptext {
+    visibility: hidden;
+    width: 220px;
+    background-color: #333;
+    color: #fff;
+    text-align: center;
+    border-radius: 6px;
+    padding: 5px 10px;
+    position: absolute;
+    z-index: 1;
+    bottom: 125%;
+    left: 50%;
+    margin-left: -110px;
+    opacity: 0;
+    transition: opacity 0.3s;
+}
+
+.tooltip:hover .tooltiptext {
+    visibility: visible;
+    opacity: 1;
+}
