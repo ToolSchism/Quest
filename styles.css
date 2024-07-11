@@ -32,6 +32,7 @@ body {
 #enemy-container {
     display: flex;
     justify-content: space-around;
+    border: 1px solid #555;
     width: 100%;
     margin-bottom: 2vh; /* Increased margin */
     flex-grow: 1;
@@ -39,6 +40,7 @@ body {
 
 #player-container {
     width: 100%;
+    border: 1px solid #555;
     display: flex;
     justify-content: center;
     margin-top: 2vh; /* Increased margin */
