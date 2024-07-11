@@ -1,0 +1,10 @@
+{
+    "souls": 0,
+    "upgrades": {
+        "bonusHealth": {
+            "amount": 5,
+            "price": 10,
+            "cap": 50
+        }
+    }
+}

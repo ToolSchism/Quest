@@ -1,20 +1,21 @@
 // Import JSON data
-let player, defaults, artifacts, translator, items, enemyTypes;
+let player, defaults, artifacts, translator, items, enemyTypes, permanent;
 
 Promise.all([
     fetch('data/player.json').then(response => response.json()),
     fetch('data/artifacts.json').then(response => response.json()),
     fetch('data/translator.json').then(response => response.json()),
     fetch('data/items.json').then(response => response.json()),
-    fetch('data/enemyTypes.json').then(response => response.json())
-]).then(([playerData, artifactsData, translatorData, itemsData, enemyTypesData]) => {
+    fetch('data/enemyTypes.json').then(response => response.json()),
+    fetch('data/permanent.json').then(response => response.json())
+]).then(([playerData, artifactsData, translatorData, itemsData, enemyTypesData, permanentData]) => {
     player = playerData;
     defaults = { ...playerData };
     artifacts = artifactsData;
     translator = translatorData;
     items = itemsData;
     enemyTypes = enemyTypesData;
-    console.log(player, defaults, artifacts, translator, items, enemyTypes)
+    permanent = permanentData;
     // Convert string functions to actual functions for artifacts
     for (let artifactName in artifacts) {
         if (artifacts[artifactName].onGet) {
@@ -128,6 +129,8 @@ function updateUI() {
         ${player.experience} xp | ${player.gold}G
     `;
 
+    document.getElementById('souls-counter').innerHTML = `Souls: ${permanent.souls}`
+
     // Update enemy container display
     const enemyContainer = document.getElementById('enemy-container');
     enemyContainer.innerHTML = '';
@@ -156,23 +159,41 @@ function updateUI() {
     updateShop();
 }
 
+// Update the updateArtifacts function for more resilience
 function updateArtifacts() {
     const artifactsContainer = document.getElementById('artifacts');
     artifactsContainer.innerHTML = `<h2>Artifacts Obtained</h2>`;
 
-    if (player.artifacts.length === 0) {
+    if (!player.artifacts || player.artifacts.length === 0) {
         artifactsContainer.innerHTML += `<p>No artifacts obtained yet.</p>`;
     } else {
         const artifactList = player.artifacts.map((artifact, index) => {
-            const artifactKey = Object.keys(artifacts).find(key => artifacts[key] === artifact);
+            let artifactKey = typeof artifact === 'string' ? artifact : 
+                Object.keys(artifacts).find(key => artifacts[key] === artifact) || 'Unknown Artifact';
+            let description = (typeof artifact === 'object' && artifact.description) ? artifact.description : 
+                (artifacts[artifactKey] ? artifacts[artifactKey].description : 'No description available');
             return `<div class="artifact">
-                <p><strong>${artifactKey}</strong><br>${addTooltip(artifact.description)}</p>
+                <p><strong>${artifactKey}</strong><br>${addTooltip(description)}</p>
                 <button onclick="discardArtifact(${index})">Discard</button>
                 <button onclick="banishArtifact(${index})">Banish</button>
             </div>`;
         }).join('');
         artifactsContainer.innerHTML += artifactList;
     }
+}
+
+
+// Helper function to restore player data after loading
+function restorePlayerAfterLoad(savedPlayer) {
+    return {
+        ...savedPlayer,
+        inventory: Object.entries(savedPlayer.inventory).reduce((acc, [key, value]) => {
+            acc[key] = value;
+            return acc;
+        }, {}),
+        artifacts: savedPlayer.artifacts.map(artifactKey => artifacts[artifactKey]),
+        banishedArtifacts: savedPlayer.banishedArtifacts.map(artifactKey => artifacts[artifactKey])
+    };
 }
 
 function updateShop() {
@@ -348,6 +369,7 @@ function attack() {
     log(`You dealt ${damage} damage to the ${enemy.type}${critBonusText}.${midasBonusText}`);
 
     if (enemy.health <= 0) {
+        permanent.souls += 1;
         log(`You defeated the ${enemy.type}!`);
         player.experience += Math.round(enemy.experience * player.experienceMultiplier);
         player.gold += enemy.gold;
@@ -527,19 +549,32 @@ function gameOver() {
     document.getElementById('action-buttons').appendChild(newGameBtn);
 }
 
+// Modify the newGame function to clear the saved game
 function newGame() {
+    localStorage.removeItem(saveKey);
+    player = { ...defaults }; // Reset player to default values
+    currentWave = 1;
+    currentEnemies = [];
+    selectedEnemy = null;
+    statMod = 1;
+    potionPrice = 10;
+    generateEnemies();
+    updateUI();
+    location.reload();
+}
+
+function refresh() {
     location.reload();
 }
 
 function checkLevelUp() {
-    const expToNextLevel = Math.round(10 * Math.pow(player.level, 2));
+    const expToNextLevel = Math.round(10 * Math.pow(player.level, 3));
     if (player.experience >= expToNextLevel) {
         player.level++;
-        player.experience -= expToNextLevel;
         player.maxHealth += 2 * player.level;
         player.health += 2 * player.level;
         player.attack += Math.max(1, (1 * player.level - 3));
-        player.defense += Math.round(Math.max(1, (1 * player.level - 15) / 2));
+        player.defense += Math.round(Math.max(1, (1 * player.level) / 8));
         log(`Level up! You are now level ${player.level}!`);
         log('Your stats have increased!');
         checkLevelUp();
@@ -560,10 +595,74 @@ document.getElementById('attack-btn').onclick = attack;
 document.getElementById('bravery-btn').onclick = bravery;
 document.getElementById('defend-btn').onclick = defend;
 
-// Initialize the game
+let saveKey = 'roguelikeSave';
+
+// Helper function to prepare player data for saving
+function preparePlayerForSave(player) {
+    return {
+        ...player,
+        inventory: Object.entries(player.inventory).reduce((acc, [key, value]) => {
+            acc[key] = value;
+            return acc;
+        }, {}),
+        artifacts: player.artifacts.map(artifact => 
+            Object.keys(artifacts).find(key => artifacts[key] === artifact)
+        ),
+        banishedArtifacts: player.banishedArtifacts.map(artifact => 
+            Object.keys(artifacts).find(key => artifacts[key] === artifact)
+        )
+    };
+}
+
+
+// Updated saveGame function
+function saveGame() {
+    const saveData = {
+        player: preparePlayerForSave(player),
+        currentWave: currentWave,
+        currentEnemies: currentEnemies,
+        selectedEnemy: selectedEnemy,
+        statMod: statMod,
+        potionPrice: potionPrice,
+        itemData: items
+    };
+    localStorage.setItem(saveKey, JSON.stringify(saveData));
+    console.log('Saved data:', saveData); // For debugging
+}
+
+// Updated loadGame function
+function loadGame() {
+    const savedData = localStorage.getItem(saveKey);
+    if (savedData) {
+        const parsedData = JSON.parse(savedData);
+        player = restorePlayerAfterLoad(parsedData.player);
+        currentWave = parsedData.currentWave;
+        currentEnemies = parsedData.currentEnemies;
+        selectedEnemy = parsedData.selectedEnemy;
+        statMod = parsedData.statMod;
+        potionPrice = parsedData.potionPrice;
+        items = parsedData.itemData;
+        updateUI();
+        console.log('Loaded player data:', player); // For debugging
+    } else {
+        log('No saved game found.');
+    }
+}
+
+function autoSave() {
+    saveGame();
+    setTimeout(autoSave, 3000); // in ms
+}
+
 function initializeGame() {
-    generateEnemies();
+    const savedData = localStorage.getItem(saveKey);
+    if (savedData) {
+        loadGame();
+    } else {
+        generateEnemies();
+        log('The battle begins!');
+        log(`Targeting ${currentEnemies[selectedEnemy].type}.`);
+    }
+    autoSave();
     updateUI();
-    log('The battle begins!');
-    log(`Targeting ${currentEnemies[selectedEnemy].type}.`);
 }

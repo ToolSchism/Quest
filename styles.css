@@ -2,9 +2,10 @@ body {
     font-family: 'Helvetica Neue', Arial, sans-serif;
     display: flex;
     justify-content: center;
-    align-items: center;
-    height: 100vh;
+    align-items: flex-start; /* Changed from center to flex-start */
+    height: 150vh; /* Kept at 150vh as you increased it */
     margin: 0;
+    padding-top: 2vh; /* Added small top padding */
     background-color: #1e1e1e;
     color: #f0f0f0;
 }
@@ -16,22 +17,23 @@ body {
     box-shadow: 0 4px 20px rgba(255, 255, 255, 0.1);
     width: 80%;
     max-width: 1000px;
-    height: 95vh;
+    height: auto; /* Changed to auto to accommodate content */
     display: flex;
     flex-direction: column;
     overflow: hidden;
+    margin-top: 0; /* Removed negative margin */
 }
 
 #wave-title {
     font-size: 2.5vh;
-    margin-bottom: 1vh;
+    margin-bottom: 2vh; /* Increased margin to create space */
 }
 
 #enemy-container {
     display: flex;
     justify-content: space-around;
     width: 100%;
-    margin-bottom: 2vh;
+    margin-bottom: 2vh; /* Increased margin */
     flex-grow: 1;
 }
 
@@ -39,38 +41,25 @@ body {
     width: 100%;
     display: flex;
     justify-content: center;
-    margin-top: 2vh;
+    margin-top: 2vh; /* Increased margin */
     flex-grow: 1;
-}
-
-.enemy,
-#player-stats {
-    border: 1px solid #555;
-    padding: 2vh;
-    border-radius: 8px;
-    font-size: 2vh;
 }
 
 #action-buttons {
     display: flex;
     justify-content: center;
     width: 100%;
-    margin: 2vh 0;
-}
-
-#action-buttons button {
-    font-size: 1.8vh;
-    padding: 1vh 2vh;
+    margin: 2vh 0; /* Increased margin */
 }
 
 #game-log {
     font-size: 1.4vh;
-    margin-top: 1vh;
+    margin-top: 2vh; /* Increased margin */
     padding: 1vh;
     border: 1px solid #555;
     border-radius: 8px;
     background-color: #333;
-    height: 12vh;
+    height: 15vh; /* Increased height */
     overflow-y: auto;
     display: flex;
     flex-direction: column;
@@ -79,16 +68,16 @@ body {
 #bottom-section {
     display: flex;
     flex-direction: column;
-    height: 30vh;
+    height: auto; /* Changed to auto */
+    margin-top: 2vh; /* Added margin */
 }
 
-#shop-inventory-container {
+#shop-inventory-container, #souls-shop-container {
     display: flex;
     justify-content: space-between;
-    margin-top: 1vh;
-    height: 100%;
-    overflow-x: hidden;
-    overflow-y: auto;
+    margin-top: 2vh; /* Increased margin */
+    height: 40vh; /* Set a fixed height */
+    overflow-y: auto; /* Allow scrolling if content exceeds height */
 }
 
 #shop,
@@ -98,7 +87,7 @@ body {
     padding: 1vh;
     border: 1px solid #555;
     border-radius: 8px;
-    width: 48%;
+    width: 32%; /* Adjust width for three equal columns */
     background-color: #333;
     overflow-y: auto;
     overflow-x: hidden;
@@ -106,6 +95,23 @@ body {
     flex-direction: column;
     align-items: center;
     text-align: center;
+    height: 90%; /* Match height */
+}
+
+#souls-shop {
+    font-size: 1.6vh;
+    padding: 1vh;
+    border: 1px solid #555;
+    border-radius: 8px;
+    width: 100%; /* Adjust width for three equal columns */
+    background-color: #333;
+    overflow-y: auto;
+    overflow-x: hidden;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    height: 90%; /* Match height */
 }
 
 #shop-items,
@@ -120,7 +126,8 @@ body {
 
 #shop h2,
 #inventory h2,
-#artifacts h2 {
+#artifacts h2,
+#souls-shop h2 {
     text-align: center;
     width: 100%;
 }
