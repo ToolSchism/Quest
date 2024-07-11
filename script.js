@@ -168,9 +168,9 @@ function updateArtifacts() {
         artifactsContainer.innerHTML += `<p>No artifacts obtained yet.</p>`;
     } else {
         const artifactList = player.artifacts.map((artifact, index) => {
-            let artifactKey = typeof artifact === 'string' ? artifact : 
+            let artifactKey = typeof artifact === 'string' ? artifact :
                 Object.keys(artifacts).find(key => artifacts[key] === artifact) || 'Unknown Artifact';
-            let description = (typeof artifact === 'object' && artifact.description) ? artifact.description : 
+            let description = (typeof artifact === 'object' && artifact.description) ? artifact.description :
                 (artifacts[artifactKey] ? artifacts[artifactKey].description : 'No description available');
             return `<div class="artifact">
                 <p><strong>${artifactKey}</strong><br>${addTooltip(description)}</p>
@@ -200,12 +200,19 @@ function updateShop() {
     const shopItemsDiv = document.getElementById('shop-items');
     shopItemsDiv.innerHTML = '';
 
+    console.log('Updating shop...'); // Debugging log
+    console.log('Player shop data:', player.shop); // Debugging log
+    console.log('Items data:', items); // Debugging log
+
     for (const [key, item] of Object.entries(items)) {
-        if (item.price !== undefined) {
+        if (items[key] && player.shop[key].price !== undefined) { // Check if player.shop[key] exists
             const button = document.createElement('button');
-            button.textContent = `Buy ${item.name} (${item.price} gold)`;
+            button.textContent = `Buy ${item.name} (${player.shop[key].price} gold)`;
             button.onclick = () => buyItem(key);
             shopItemsDiv.appendChild(button);
+            console.log(`Added button for ${item.name} with price ${player.shop[key].price}`); // Debugging log
+        } else {
+            console.warn(`Item ${key} does not exist in player shop or does not have a price`); // Debugging log
         }
     }
 }
@@ -225,12 +232,13 @@ function updateInventory() {
 }
 
 function buyItem(itemKey) {
-    const item = items[itemKey];
+    const item = player.shop[itemKey];
+    const item2 = items[itemKey]
     if (player.gold >= item.price) {
         player.gold -= item.price;
         player.inventory[itemKey] = (player.inventory[itemKey] || 0) + 1;
         item.price += item.priceUpdate || 0;
-        log(`You bought a ${item.name}!`);
+        log(`You bought a ${item2.name}`)
         updateShop();
         updateInventory();
         updateUI();
@@ -513,10 +521,6 @@ function acquireArtifact() {
 
 
 function nextWave() {
-    if (currentWave % 5 === 0) {
-        acquireArtifact();
-    }
-    currentWave++;
     player.stoneSkinStacks = 0;
     player.tempAttack = 0;
     player.tempCritChance = 0;
@@ -527,8 +531,12 @@ function nextWave() {
     log(`Wave ${currentWave} begins! Enemy stats increased by 6%.`);
     clearLog();
     generateEnemies();
-    updateUI();
     log(`Targeting ${currentEnemies[selectedEnemy].type}.`);
+    if (currentWave % 5 === 0) {
+        acquireArtifact();
+    }
+    currentWave++;
+    updateUI();
 }
 
 function gameOver() {
@@ -605,10 +613,10 @@ function preparePlayerForSave(player) {
             acc[key] = value;
             return acc;
         }, {}),
-        artifacts: player.artifacts.map(artifact => 
+        artifacts: player.artifacts.map(artifact =>
             Object.keys(artifacts).find(key => artifacts[key] === artifact)
         ),
-        banishedArtifacts: player.banishedArtifacts.map(artifact => 
+        banishedArtifacts: player.banishedArtifacts.map(artifact =>
             Object.keys(artifacts).find(key => artifacts[key] === artifact)
         )
     };
@@ -624,7 +632,6 @@ function saveGame() {
         selectedEnemy: selectedEnemy,
         statMod: statMod,
         potionPrice: potionPrice,
-        itemData: items
     };
     localStorage.setItem(saveKey, JSON.stringify(saveData));
     console.log('Saved data:', saveData); // For debugging
@@ -641,7 +648,6 @@ function loadGame() {
         selectedEnemy = parsedData.selectedEnemy;
         statMod = parsedData.statMod;
         potionPrice = parsedData.potionPrice;
-        items = parsedData.itemData;
         updateUI();
         console.log('Loaded player data:', player); // For debugging
     } else {

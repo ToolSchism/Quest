@@ -29,21 +29,26 @@ body {
     margin-bottom: 2vh; /* Increased margin to create space */
 }
 
+.enemy, #player-stats {
+    border: 1px solid #555;
+    padding: 2vh;
+    border-radius: 8px;
+    font-size: 2vh; 
+}
+
 #enemy-container {
     display: flex;
     justify-content: space-around;
-    border: 1px solid #555;
     width: 100%;
-    margin-bottom: 2vh; /* Increased margin */
+    margin-bottom: 2vh;
     flex-grow: 1;
 }
 
 #player-container {
     width: 100%;
-    border: 1px solid #555;
     display: flex;
     justify-content: center;
-    margin-top: 2vh; /* Increased margin */
+    margin-top: 2vh;
     flex-grow: 1;
 }
 
@@ -51,17 +56,17 @@ body {
     display: flex;
     justify-content: center;
     width: 100%;
-    margin: 2vh 0; /* Increased margin */
+    margin: 2vh 0;
 }
 
 #game-log {
     font-size: 1.4vh;
-    margin-top: 2vh; /* Increased margin */
+    margin-top: 2vh;
     padding: 1vh;
     border: 1px solid #555;
     border-radius: 8px;
     background-color: #333;
-    height: 15vh; /* Increased height */
+    height: 15vh;
     overflow-y: auto;
     display: flex;
     flex-direction: column;
@@ -70,16 +75,16 @@ body {
 #bottom-section {
     display: flex;
     flex-direction: column;
-    height: auto; /* Changed to auto */
-    margin-top: 2vh; /* Added margin */
+    height: auto;
+    margin-top: 2vh;
 }
 
 #shop-inventory-container, #souls-shop-container {
     display: flex;
     justify-content: space-between;
-    margin-top: 2vh; /* Increased margin */
-    height: 40vh; /* Set a fixed height */
-    overflow-y: auto; /* Allow scrolling if content exceeds height */
+    margin-top: 2vh;
+    height: 40vh;
+    overflow-y: auto;
 }
 
 #shop,
@@ -89,7 +94,7 @@ body {
     padding: 1vh;
     border: 1px solid #555;
     border-radius: 8px;
-    width: 32%; /* Adjust width for three equal columns */
+    width: 32%;
     background-color: #333;
     overflow-y: auto;
     overflow-x: hidden;
@@ -97,7 +102,7 @@ body {
     flex-direction: column;
     align-items: center;
     text-align: center;
-    height: 90%; /* Match height */
+    height: 90%;
 }
 
 #souls-shop {
@@ -105,7 +110,7 @@ body {
     padding: 1vh;
     border: 1px solid #555;
     border-radius: 8px;
-    width: 100%; /* Adjust width for three equal columns */
+    width: 100%;
     background-color: #333;
     overflow-y: auto;
     overflow-x: hidden;
@@ -113,7 +118,7 @@ body {
     flex-direction: column;
     align-items: center;
     text-align: center;
-    height: 90%; /* Match height */
+    height: 90%;
 }
 
 #shop-items,

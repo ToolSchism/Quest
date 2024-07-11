@@ -28,5 +28,23 @@
     "tempCritChance": 0,
     "bonusCritChance": 0,
     "wither": 0,
-    "age": 0
+    "age": 0,
+    "shop": {
+        "potion": {
+            "price": 10,
+            "priceUpdate": 10
+        },
+        "whetstone": {
+            "price": 50,
+            "priceUpdate": 50
+        },
+        "shredOfWisdom": {
+            "price": 100,
+            "priceUpdate": 100
+        },
+        "tankBrew": {
+            "price": 100,
+            "priceUpdate": 50
+        }
+    }    
 }
