@@ -233,7 +233,7 @@ function updateUI() {
 
         // Remove suffix and convert to lowercase for icon path
         const baseEnemyType = enemy.type.replace(/\s+[A-Z]$/, '').toLowerCase();
-        const enemyIconPath = `/assets/${baseEnemyType}.png`;
+        const enemyIconPath = `./assets/${baseEnemyType}.png`;
         const enemySprite = `
             <img src="${enemyIconPath}" 
                  onerror="this.onerror=null; this.src='/assets/placeholder.png';" 
