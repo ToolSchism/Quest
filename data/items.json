@@ -1,7 +1,7 @@
 {
     "potion": {
         "name": "Healing Potion",
-        "onUse": "const healAmount = Math.floor(player.maxHealth * 0.33); player.health = Math.min(player.health + healAmount, player.maxHealth); log(`You used a ${this.name} and recovered ${healAmount} HP!`);"
+        "onUse": "const healAmount = Math.floor(player.maxHealth * 0.33); player.finalHealth = Math.min(player.finalHealth + healAmount, player.maxHealth); log(`You used a ${this.name} and recovered ${healAmount} HP!`);"
     },
     "whetstone": {
         "name": "Whetstone",
@@ -13,6 +13,6 @@
     },
     "tankBrew": {
         "name": "Tank's Brew",
-        "onUse":"player.maxHealth += 10; player.health += 10; player.defense += 1; log(`You drank the Tank's Brew... it tastes like alcohol. +10hp & +1def`);"
+        "onUse":"player.maxHealth += 10; player.finalHealth += 10; player.defense += 1; log(`You drank the Tank's Brew... it tastes like alcohol. +10hp & +1def`);"
     }
 }

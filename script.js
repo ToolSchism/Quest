@@ -1,5 +1,5 @@
 // Import JSON data
-let player, defaults, artifacts, translator, items, enemyTypes, permanent;
+let player, defaults, artifacts, translator, items, enemyTypes, permanent, areasData;
 
 Promise.all([
     fetch('data/player.json').then(response => response.json()),
@@ -7,8 +7,9 @@ Promise.all([
     fetch('data/translator.json').then(response => response.json()),
     fetch('data/items.json').then(response => response.json()),
     fetch('data/enemyTypes.json').then(response => response.json()),
-    fetch('data/permanent.json').then(response => response.json())
-]).then(([playerData, artifactsData, translatorData, itemsData, enemyTypesData, permanentData]) => {
+    fetch('data/permanent.json').then(response => response.json()),
+    fetch('data/areas.json').then(response => response.json()),
+]).then(([playerData, artifactsData, translatorData, itemsData, enemyTypesData, permanentData, areasJson]) => {
     player = playerData;
     defaults = { ...playerData };
     artifacts = artifactsData;
@@ -16,6 +17,8 @@ Promise.all([
     items = itemsData;
     enemyTypes = enemyTypesData;
     permanent = permanentData;
+    areasData = areasJson; // Assign fetched areasJson to the global areasData variable
+
     // Convert string functions to actual functions for artifacts
     for (let artifactName in artifacts) {
         if (artifacts[artifactName].onGet) {
@@ -33,16 +36,10 @@ Promise.all([
         }
     }
 
-    // Convert string functions to actual functions for enemy special attacks
-    for (let enemyType in enemyTypes) {
-        if (enemyTypes[enemyType].specialAttack && enemyTypes[enemyType].specialAttack.execute) {
-            enemyTypes[enemyType].specialAttack.execute = new Function('enemy', 'allEnemies', 'player', enemyTypes[enemyType].specialAttack.execute);
-        }
-    }
-
     // Initialize the game
     initializeGame();
 }).catch(error => console.error('Error loading game data:', error));
+
 
 // Function to show tooltip
 function showTooltip(artifactName) {
@@ -72,6 +69,7 @@ artifactElements.forEach(artifact => {
 });
 
 let currentWave = 1;
+let currentArea = null;
 let currentEnemies = [];
 let selectedEnemy = null;
 let statMod = 1;
@@ -79,40 +77,98 @@ let potionPrice = 10;
 
 function generateEnemies() {
     const enemyCount = Math.min(Math.floor(1 + (currentWave / 8)), 6);
-    const enemyTypesArray = Object.keys(enemyTypes);
     currentEnemies = [];
-
-    // Object to keep track of enemy counts
     const enemyTypeCounts = {};
 
-    for (let i = 0; i < enemyCount; i++) {
-        const randomType = enemyTypesArray[Math.floor(Math.random() * enemyTypesArray.length)];
-
-        if (!enemyTypeCounts[randomType]) {
-            enemyTypeCounts[randomType] = 0;
+    // Find the current area based on the current wave
+    for (const area in areasData) {
+        if (currentWave >= areasData[area].startingWave && currentWave <= (areasData[area].endingWave || currentWave)) {
+            currentArea = area;
+            break;
         }
+    }
 
-        enemyTypeCounts[randomType]++;
-        const count = enemyTypeCounts[randomType];
+    if (!currentArea) {
+        console.error('No valid area found for current wave.');
+        return;
+    }
 
-        // Apply unique notation only if there are multiple of the same type
-        const uniqueType = count > 1 ? `${randomType} ${String.fromCharCode(64 + count)}` : randomType;
+    // Determine if it's the final wave for the current area
+    const isFinalWave = currentWave == areasData[currentArea].endingWave - 1;
 
-        currentEnemies.push(createEnemy(randomType, uniqueType));
+    // Adjust enemy generation based on ending wave and area-specific enemies
+    if (isFinalWave && areasData[currentArea].finalWave) {
+        // Spawn specific enemies listed in finalWave for the area
+        areasData[currentArea].finalWave.forEach(enemyType => {
+            const formattedEnemyType = formatEnemyType(enemyType);
+
+            if (!enemyTypeCounts[formattedEnemyType]) {
+                enemyTypeCounts[formattedEnemyType] = 0;
+            }
+            enemyTypeCounts[formattedEnemyType]++;
+            const count = enemyTypeCounts[formattedEnemyType];
+            const uniqueType = count > 1 ? `${formattedEnemyType} ${String.fromCharCode(64 + count)}` : formattedEnemyType;
+
+            currentEnemies.push(createEnemy(formattedEnemyType, uniqueType));
+        });
+    } else {
+        // Generate enemies based on enemyCount and valid enemy types for the current area
+        const validEnemyTypes = areasData[currentArea].enemies || [];
+
+        for (let i = 0; i < enemyCount; i++) {
+            let randomType = null;
+
+            if (validEnemyTypes.length > 0) {
+                randomType = validEnemyTypes[Math.floor(Math.random() * validEnemyTypes.length)];
+                randomType = formatEnemyType(randomType);
+            } else {
+                console.error('No valid enemy types found for the current area.');
+                return;
+            }
+
+            if (!enemyTypeCounts[randomType]) {
+                enemyTypeCounts[randomType] = 0;
+            }
+            enemyTypeCounts[randomType]++;
+            const count = enemyTypeCounts[randomType];
+            const uniqueType = count > 1 ? `${randomType} ${String.fromCharCode(64 + count)}` : randomType;
+            currentEnemies.push(createEnemy(randomType, uniqueType));
+        }
     }
 
     selectedEnemy = 0;
 }
 
+function formatEnemyType(enemyType) {
+    // Split the enemy type by spaces, capitalize each word, and join back with spaces
+    return enemyType.split(' ')
+        .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+        .join(' ');
+}
+
 function createEnemy(baseType, uniqueType) {
     const baseStats = enemyTypes[baseType];
+
+    // Check if baseStats is defined
+    if (!baseStats) {
+        console.error(`Enemy type '${baseType}' not found in enemyTypes.`);
+        return null; // or handle the error appropriately
+    }
+
+    // Calculate stats based on baseStats and statMod
+    const maxHealth = Math.round(baseStats.maxHealth * statMod);
+    const health = Math.round(baseStats.health * statMod);
+    const attack = Math.round(baseStats.attack * statMod);
+    const defense = Math.round(baseStats.defense * statMod);
+    const experience = Math.round(baseStats.experience * statMod);
+
     return {
         ...baseStats,
-        maxHealth: Math.round(baseStats.maxHealth * statMod),
-        health: Math.round(baseStats.health * statMod),
-        attack: Math.round(baseStats.attack * statMod),
-        defense: Math.round(baseStats.defense * statMod),
-        experience: Math.round(baseStats.experience * statMod),
+        maxHealth: maxHealth,
+        health: health,
+        attack: attack,
+        defense: defense,
+        experience: experience,
         type: uniqueType,
         tempDefense: 0,
         shattered: false,
@@ -121,17 +177,46 @@ function createEnemy(baseType, uniqueType) {
     };
 }
 
+
+const goldIcon = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="stat-icon gold-icon"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>`;
+const swordIcon = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="stat-icon"><path d="M14.5 17.5L3 6V3h3l11.5 11.5"/><path d="M13 19l6-6"/><path d="M16 16l4 4"/><path d="M19 21l2-2"/></svg>`;
+const shieldIcon = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="stat-icon"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>`;
+const heartIcon = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="stat-icon"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>`;
+
+let disableItemActions = true;
+
 function updateUI() {
-    // Update player stats display
-    document.getElementById('player-stats').innerHTML = `
-        You: Level ${player.level}<br>
-        HP ${player.health}/${player.maxHealth} | ATK ${player.attack} (+${player.tempAttack}) | DEF ${player.defense} (+${player.tempDefense})<br>
-        ${player.experience} xp | ${player.gold}G
+    applyStats2();
+    const playerContainer = document.getElementById('player-container');
+    const healthPercentage = (player.finalHealth / player.maxHealth) * 100;
+    const expToNextLevel = Math.round(10 * Math.pow(player.level, 1.7));
+    const xpPercentage = (player.experience / expToNextLevel) * 100;
+
+    playerContainer.innerHTML = `
+        <div class="player-stats">
+            <div class="stat-row">
+                <span>Level ${player.level}</span>
+                <span>${goldIcon} ${player.gold}G</span>
+            </div>
+            <div class="stat-row">
+                <div class="stat-container">${heartIcon} ${player.finalHealth}/${player.maxHealth}</div>
+                <div class="stat-container">${swordIcon} ${player.attack} (+${player.tempAttack})</div>
+                <div class="stat-container">${shieldIcon} ${player.defense} (+${player.tempDefense})</div>
+            </div>
+            <div class="progress-bar">
+                <div class="progress-fill health-fill" style="width: ${healthPercentage}%;"></div>
+            </div>
+            <div class="stat-row">
+                <span>XP: ${player.experience}/${expToNextLevel}</span>
+            </div>
+            <div class="progress-bar">
+                <div class="progress-fill xp-fill" style="width: ${xpPercentage}%;"></div>
+            </div>
+        </div>
     `;
 
-    document.getElementById('souls-counter').innerHTML = `Souls: ${permanent.souls}`
+    document.getElementById('souls-counter').innerHTML = `Souls: ${permanent.souls}`;
 
-    // Update enemy container display
     const enemyContainer = document.getElementById('enemy-container');
     enemyContainer.innerHTML = '';
     currentEnemies.forEach((enemy, index) => {
@@ -140,26 +225,106 @@ function updateUI() {
         if (selectedEnemy === index) {
             enemyElement.classList.add('selected');
         }
+        if (!isPlayerTurn && index === currentActingEnemy) {
+            enemyElement.classList.add('acting');
+        }
+
+        const healthPercentage = (enemy.health / enemy.maxHealth) * 100;
+
+        // Remove suffix and convert to lowercase for icon path
+        const baseEnemyType = enemy.type.replace(/\s+[A-Z]$/, '').toLowerCase();
+        const enemyIconPath = `/assets/${baseEnemyType}.png`;
+        const enemySprite = `
+            <img src="${enemyIconPath}" 
+                 onerror="this.onerror=null; this.src='/assets/placeholder.png';" 
+                 alt="${enemy.type}" 
+                 class="enemy-sprite"
+            >
+        `;
+
         enemyElement.innerHTML = `
-            ${enemy.type}<br>
-            HP ${enemy.health}/${enemy.maxHealth}<br>
-            ATK ${enemy.attack} | DEF ${enemy.defense} (+${enemy.tempDefense})<br>
-            Special: ${enemy.specialAttack.name}
+            ${enemySprite}
+            <div class="enemy-stats">
+                <div class="stat-container">${swordIcon}${enemy.attack}</div>
+                <div class="stat-container">${shieldIcon}${enemy.defense}</div>
+            </div>
+            <div class="health-bar">
+                <div class="health-fill" style="width: ${healthPercentage}%;"></div>
+            </div>
+            <div class="stat-container">${heartIcon}${enemy.health}</div>
         `;
         enemyElement.onclick = () => selectEnemy(index);
         enemyContainer.appendChild(enemyElement);
     });
 
-    // Update wave title
     const waveTitle = document.getElementById('wave-title');
     waveTitle.textContent = `Wave ${currentWave}`;
+
+    for (const area in areasData) {
+        if (currentWave >= areasData[area].startingWave && currentWave <= areasData[area].endingWave) {
+            currentArea = area;
+            break;
+        }
+    }
+
+    if (currentArea) {
+        const hexColor = areasData[currentArea].hex;
+        const gameContainer = document.getElementById('game-container');
+        gameContainer.style.backgroundColor = `#${hexColor}`;
+
+        // Update specific area containers with slightly darker background color
+        const darkerHexColor = darkenHexColor(hexColor);
+        document.getElementById('shop').style.backgroundColor = `#${darkerHexColor}`;
+        document.getElementById('inventory').style.backgroundColor = `#${darkerHexColor}`;
+        document.getElementById('artifacts').style.backgroundColor = `#${darkerHexColor}`;
+        document.getElementById('souls-shop').style.backgroundColor = `#${darkerHexColor}`;
+
+         // Update .enemy.selected background color
+         const selectedEnemies = document.querySelectorAll('.enemy.selected');
+         selectedEnemies.forEach(enemy => {
+             enemy.style.backgroundColor = `#${darkerHexColor}`;
+         });
+ 
+         // Update #game-log background color
+         const gameLog = document.getElementById('game-log');
+         gameLog.style.backgroundColor = `#${darkerHexColor}`;
+    }
 
     updateArtifacts();
     updateInventory();
     updateShop();
+    updateSoulsShop();
 }
 
-// Update the updateArtifacts function for more resilience
+// Function to darken a hex color slightly
+function darkenHexColor(hex) {
+    const padZero = (str, len) => {
+        len = len || 2;
+        const zeros = new Array(len).join('0');
+        return (zeros + str).slice(-len);
+    };
+
+    const darkenAmount = 20; // Adjust as needed
+
+    // Convert hex to RGB
+    const r = parseInt(hex.substring(0, 2), 16);
+    const g = parseInt(hex.substring(2, 4), 16);
+    const b = parseInt(hex.substring(4, 6), 16);
+
+    // Darken the RGB values
+    const darkenedR = Math.max(0, r - darkenAmount);
+    const darkenedG = Math.max(0, g - darkenAmount);
+    const darkenedB = Math.max(0, b - darkenAmount);
+
+    // Convert back to hex
+    const darkenedHex = padZero(darkenedR.toString(16)) +
+        padZero(darkenedG.toString(16)) +
+        padZero(darkenedB.toString(16));
+
+    return darkenedHex;
+}
+
+
 function updateArtifacts() {
     const artifactsContainer = document.getElementById('artifacts');
     artifactsContainer.innerHTML = `<h2>Artifacts Obtained</h2>`;
@@ -172,18 +337,27 @@ function updateArtifacts() {
                 Object.keys(artifacts).find(key => artifacts[key] === artifact) || 'Unknown Artifact';
             let description = (typeof artifact === 'object' && artifact.description) ? artifact.description :
                 (artifacts[artifactKey] ? artifacts[artifactKey].description : 'No description available');
-            return `<div class="artifact">
+
+            const artifactDiv = document.createElement('div');
+            artifactDiv.classList.add('artifact');
+
+            artifactDiv.innerHTML = `
                 <p><strong>${artifactKey}</strong><br>${addTooltip(description)}</p>
                 <button onclick="discardArtifact(${index})">Discard</button>
                 <button onclick="banishArtifact(${index})">Banish</button>
-            </div>`;
+            `;
+
+            artifactsContainer.appendChild(artifactDiv);
+
+            // Enable or disable buttons based on disableItemActions toggle
+            const discardButton = artifactDiv.querySelector('button:nth-of-type(1)');
+            const banishButton = artifactDiv.querySelector('button:nth-of-type(2)');
+            discardButton.disabled = disableItemActions;
+            banishButton.disabled = disableItemActions;
         }).join('');
-        artifactsContainer.innerHTML += artifactList;
     }
 }
 
-
-// Helper function to restore player data after loading
 function restorePlayerAfterLoad(savedPlayer) {
     return {
         ...savedPlayer,
@@ -200,10 +374,6 @@ function updateShop() {
     const shopItemsDiv = document.getElementById('shop-items');
     shopItemsDiv.innerHTML = '';
 
-    console.log('Updating shop...'); // Debugging log
-    console.log('Player shop data:', player.shop); // Debugging log
-    console.log('Items data:', items); // Debugging log
-
     for (const [key, item] of Object.entries(items)) {
         if (items[key] && player.shop[key].price !== undefined) { // Check if player.shop[key] exists
             const button = document.createElement('button');
@@ -211,6 +381,9 @@ function updateShop() {
             button.onclick = () => buyItem(key);
             shopItemsDiv.appendChild(button);
             console.log(`Added button for ${item.name} with price ${player.shop[key].price}`); // Debugging log
+
+            // Enable or disable based on disableItemActions toggle
+            button.disabled = disableItemActions;
         } else {
             console.warn(`Item ${key} does not exist in player shop or does not have a price`); // Debugging log
         }
@@ -227,6 +400,9 @@ function updateInventory() {
             button.textContent = `Use ${items[key].name} (${count} left)`;
             button.onclick = () => useItem(key);
             inventoryItemsDiv.appendChild(button);
+
+            // Enable or disable based on disableItemActions toggle
+            button.disabled = disableItemActions;
         }
     }
 }
@@ -277,7 +453,6 @@ function banishArtifact(index) {
     updateUI();
 }
 
-// Function to add tooltips based on defined terms
 function addTooltip(description) {
     const tooltipRegex = /\/([^\/]+)\//g; // Regex to find terms enclosed in slashes
     return description.replace(tooltipRegex, (match, term) => {
@@ -289,16 +464,45 @@ function addTooltip(description) {
     });
 }
 
-
 function selectEnemy(index) {
     selectedEnemy = index;
     updateUI();
     log(`Targeting ${currentEnemies[index].type}.`);
 }
 
+let isPlayerTurn = true;
+let currentActingEnemy = null;
+
+function disableAllButtons() {
+    document.getElementById('attack-btn').disabled = true;
+    document.getElementById('defend-btn').disabled = true;
+    document.getElementById('bravery-btn').disabled = true;
+}
+
+function enableAllButtons() {
+    document.getElementById('attack-btn').disabled = false;
+    if (d == false) {
+        document.getElementById('defend-btn').disabled = false;
+    }
+    if (b == false) {
+        document.getElementById('bravery-btn').disabled = false;
+    }
+}
+
+function startPlayerTurn() {
+    isPlayerTurn = true;
+    enableAllButtons();
+    log("It's your turn!");
+    updateUI();
+}
+
 function attack() {
+    if (!isPlayerTurn) return;
+    disableAllButtons();
+
     if (selectedEnemy === null) {
         log('Please select an enemy to attack.');
+        enableAllButtons();
         return;
     }
 
@@ -306,8 +510,6 @@ function attack() {
     let damage = Math.max(0, (player.attack + player.tempAttack) - (enemy.defense + enemy.tempDefense));
     let critBonusText = "";
 
-
-    // <Status Effects>
     if (player.shatterImbue && Math.random() < 0.33 && enemy.shattered == false) {
         enemy.shattered = true;
         enemy.defense = 0;
@@ -328,10 +530,7 @@ function attack() {
     if (player.berserkerRage) {
         player.tempAttack += Math.max(1, Math.round(player.attack / 100))
     }
-    // </Status Effects>
 
-
-    // <Damage Mods - Positive>
     if (enemy.health == enemy.maxHealth) {
         damage = Math.max(0, ((player.attack + player.tempAttack) * player.FullHealthExtraDamage) - (enemy.defense + enemy.tempDefense));
     }
@@ -345,20 +544,13 @@ function attack() {
         damage *= 2
         critBonusText = " (Crit!)"
     }
-    // </Damage Mods - Positive>
 
-
-    // <Damage Mods - Negative>
     if (player.midas) {
         damage *= 0.9
     }
-    // </Damage Mods - Negative>  
-
 
     damage = Math.round(damage);
 
-
-    // <Post damage calc bonuses>
     var midasBonusText = ""
     if (player.midas) {
         midasBonusText = ` You also got ${Math.round(damage / 10)}G.`
@@ -367,11 +559,9 @@ function attack() {
 
     if (player.vampiricHeal > 0) {
         const healAmount = Math.round(damage * player.vampiricHeal);
-        player.health = Math.min(player.maxHealth, player.health + healAmount);
+        player.finalHealth = Math.min(player.maxHealth, player.finalHealth + healAmount);
         log(`You healed for ${healAmount} HP from your Vampiric Amulet.`);
     }
-    // </Post damage calc bonuses>
-
 
     enemy.health -= damage;
     log(`You dealt ${damage} damage to the ${enemy.type}${critBonusText}.${midasBonusText}`);
@@ -379,9 +569,9 @@ function attack() {
     if (enemy.health <= 0) {
         permanent.souls += 1;
         log(`You defeated the ${enemy.type}!`);
-        player.experience += Math.round(enemy.experience * player.experienceMultiplier);
+        player.experience += Math.round(enemy.experience * player.finalExperience);
         player.gold += enemy.gold;
-        log(`You gained ${Math.round(enemy.experience * player.experienceMultiplier)} EXP and ${enemy.gold} gold!`);
+        log(`You gained ${Math.round(enemy.experience * player.finalExperience)} EXP and ${enemy.gold} gold!`);
         checkLevelUp();
         currentEnemies.splice(selectedEnemy, 1);
 
@@ -397,44 +587,85 @@ function attack() {
         nextWave();
     } else {
         updateUI();
-        enemyTurn();
+        startEnemyTurn();
     }
 }
 
+var d = false;
 function defend() {
-    player.tempDefense = 1 + Math.round(player.defense / 5)
+    if (!isPlayerTurn) return;
+    disableAllButtons();
+
+    player.tempDefense = 1 + Math.round(player.defense / 5);
     document.getElementById('defend-btn').disabled = true;
-    log('Nothing will best you! Increase your defense by 20% for the wave.')
+    log('Nothing will best you! Increase your defense by 20% for the wave.');
     if (player.stoneIdol) {
         log('You get 6 stacks of Stone Skin from the Stone Idol.');
         player.stoneSkinStacks += 6;
     }
+    d = true;
     updateUI();
-    enemyTurn();
+    startEnemyTurn();
+
 }
 
+var b = false;
 function bravery() {
+    if (!isPlayerTurn) return;
+    disableAllButtons();
+
     player.tempAttack = Math.round(player.attack / 2);
     player.tempCritChance += player.bonusCritChance;
     document.getElementById('bravery-btn').disabled = true;
-    log('Nothing will best you! Increase your attack by 50% for the wave.')
+    b = true
+    log('Nothing will best you! Increase your attack by 50% for the wave.');
+
     updateUI();
-    enemyTurn();
+    startEnemyTurn();
 }
 
-function enemyTurn() {
-    currentEnemies.forEach(enemy => {
+function startEnemyTurn() {
+    disableAllButtons();
+    isPlayerTurn = false;
+    currentActingEnemy = 0;
+    enemyAction();
+}
+
+function enemyAction() {
+    if (currentActingEnemy >= currentEnemies.length) {
+        startPlayerTurn();
+        return;
+    }
+
+    const enemy = currentEnemies[currentActingEnemy];
+    log(`${enemy.type} is taking its turn...`);
+    updateUI(); // Highlight the current enemy
+
+    setTimeout(() => {
         enemy.tempDefense = 0;  // Reset temporary defense
         if (enemy.frozenCounter > 0) {
             enemy.frozenCounter--;
             log(`${enemy.type} is frozen and cannot act!`);
-            updateUI();
+            currentActingEnemy++;
+            enemyAction();
             return;
         }
 
         if (player.wither > 0) {
             enemy.health -= Math.round(enemy.maxHealth * player.wither);
             log(`${enemy.type} withers for ${Math.round(enemy.maxHealth * player.wither)} damage.`);
+
+            if (enemy.health <= 0) {
+                log(`The ${enemy.type} withers away...`);
+                player.experience += Math.round(enemy.experience * player.finalExperience);
+                player.gold += enemy.gold;
+                log(`You gained ${Math.round(enemy.experience * player.finalExperience)} EXP and ${enemy.gold} gold!`);
+                checkLevelUp();
+                currentEnemies = currentEnemies.filter(e => e !== enemy);
+                if (currentEnemies.length === 0) {
+                    nextWave();
+                }
+            }
         }
 
         if (player.age > 0) {
@@ -446,22 +677,8 @@ function enemyTurn() {
         }
 
         let damage;
-        let attackType = "normal";
+        damage = Math.max(0, enemy.attack - (player.defense + player.tempDefense + player.stoneSkinStacks));
 
-        if (Math.random() < 0.3) {  // 30% chance to use special attack
-            const result = enemy.specialAttack.execute(enemy, currentEnemies);
-            if (typeof result === 'string') {
-                log(result);
-                return;
-            } else {
-                damage = Math.max(0, result.damage - (player.defense + player.tempDefense + player.stoneSkinStacks));
-                attackType = "special";
-            }
-        } else {
-            damage = Math.max(0, enemy.attack - (player.defense + player.tempDefense + player.stoneSkinStacks));
-        }
-
-        // Mirror Shield check
         if (player.mirrorShieldChance > 0 && Math.random() < player.mirrorShieldChance) {
             enemy.health -= damage;
             log(`Your Mirror Shield reflected ${damage} damage back to the ${enemy.type}!`);
@@ -472,27 +689,28 @@ function enemyTurn() {
                 log(`You gained ${enemy.experience} EXP and ${enemy.gold} gold!`);
                 checkLevelUp();
                 currentEnemies = currentEnemies.filter(e => e !== enemy);
+                if (currentEnemies.length === 0) {
+                    nextWave();
+                }
             }
         } else {
-            player.health -= damage;
-            if (attackType === "special") {
-                log(result.message);
-                log(`You took ${damage} damage from the ${enemy.type}'s special attack.`);
-            } else {
-                log(`The ${enemy.type} dealt ${damage} damage to you.`);
-            }
+            player.finalHealth -= damage;
+            log(`The ${enemy.type} dealt ${damage} damage to you.`);
         }
-    });
 
-    if (player.health <= 0 && player.phoenixRevive) {
-        player.health = 1;
-        player.phoenixRevive = false; // Use up the revival
-        log("Your Phoenix Feather brought you back from the brink of death!");
-    } else if (player.health <= 0) {
-        gameOver();
-    } else {
+        if (player.finalHealth <= 0 && player.phoenixRevive) {
+            player.finalHealth = 1;
+            player.phoenixRevive = false;
+            log("Your Phoenix Feather brought you back from the brink of death!");
+            startPlayerTurn();
+        } else if (player.finalHealth <= 0) {
+            gameOver();
+        } else {
+            currentActingEnemy++;
+            enemyAction();
+        }
         updateUI();
-    }
+    }, 500);
 }
 
 function acquireArtifact() {
@@ -519,16 +737,37 @@ function acquireArtifact() {
 }
 
 
-
+let nextWaveButton;
 function nextWave() {
+    disableItemActions = false;
+    nextWaveButton = document.createElement('button');
+    nextWaveButton.textContent = 'Next Wave';
+    nextWaveButton.onclick = nextWaveFinal;
+    document.getElementById('action-buttons').appendChild(nextWaveButton);
+    updateUI();
+}
+
+function nextWaveFinal() {
+    disableItemActions = true;
+    if (nextWaveButton && nextWaveButton.parentNode) {
+        nextWaveButton.parentNode.removeChild(nextWaveButton);
+    }
+    b = false;
+    d = false;
     player.stoneSkinStacks = 0;
     player.tempAttack = 0;
     player.tempCritChance = 0;
+    // Check if player has the phoenix feather artifact and it is false, then set it to true
+    const phoenixArtifact = player.artifacts.find(artifact => artifact === artifacts.phoenixFeather);
+    if (phoenixArtifact && !player.phoenixRevive) {
+        player.phoenixRevive = true;
+        log("Your Phoenix Feather artifact is ready to revive you once more!");
+    }
     document.getElementById('bravery-btn').disabled = false;
     player.tempDefense = 0;
     document.getElementById('defend-btn').disabled = false;
-    statMod = parseFloat((statMod * 1.06).toFixed(2));
-    log(`Wave ${currentWave} begins! Enemy stats increased by 6%.`);
+    statMod = parseFloat((statMod * 1.03).toFixed(2));
+    log(`Wave ${currentWave} begins! Enemy stats increased by 3%.`);
     clearLog();
     generateEnemies();
     log(`Targeting ${currentEnemies[selectedEnemy].type}.`);
@@ -536,6 +775,7 @@ function nextWave() {
         acquireArtifact();
     }
     currentWave++;
+    startPlayerTurn();
     updateUI();
 }
 
@@ -561,6 +801,26 @@ function gameOver() {
 function newGame() {
     localStorage.removeItem(saveKey);
     player = { ...defaults }; // Reset player to default values
+    player.artifacts = [];
+    player.shop = {
+        "potion": {
+            "price": 5,
+            "priceUpdate": 5
+        },
+        "whetstone": {
+            "price": 50,
+            "priceUpdate": 10
+        },
+        "shredOfWisdom": {
+            "price": 50,
+            "priceUpdate": 25
+        },
+        "tankBrew": {
+            "price": 40,
+            "priceUpdate": 10
+        }
+    }  
+    player.inventory = [];
     currentWave = 1;
     currentEnemies = [];
     selectedEnemy = null;
@@ -568,7 +828,9 @@ function newGame() {
     potionPrice = 10;
     generateEnemies();
     updateUI();
-    location.reload();
+    applyStats();
+    saveGame(1);
+    refresh();
 }
 
 function refresh() {
@@ -576,11 +838,12 @@ function refresh() {
 }
 
 function checkLevelUp() {
-    const expToNextLevel = Math.round(10 * Math.pow(player.level, 3));
+    const expToNextLevel = Math.round(10 * Math.pow(player.level, 1.7));
     if (player.experience >= expToNextLevel) {
         player.level++;
+        player.experience -= expToNextLevel
         player.maxHealth += 2 * player.level;
-        player.health += 2 * player.level;
+        player.finalHealth += 2 * player.level;
         player.attack += Math.max(1, (1 * player.level - 3));
         player.defense += Math.round(Math.max(1, (1 * player.level) / 8));
         log(`Level up! You are now level ${player.level}!`);
@@ -603,7 +866,8 @@ document.getElementById('attack-btn').onclick = attack;
 document.getElementById('bravery-btn').onclick = bravery;
 document.getElementById('defend-btn').onclick = defend;
 
-let saveKey = 'roguelikeSave';
+let saveKey = 'player';
+let saveKey2 = 'perma'
 
 // Helper function to prepare player data for saving
 function preparePlayerForSave(player) {
@@ -623,23 +887,45 @@ function preparePlayerForSave(player) {
 }
 
 
-// Updated saveGame function
-function saveGame() {
+let saving = false; // Global variable to track saving state
+let savePriority = 0; // Global variable to track save priority
+
+function saveGame(priority = 0) {
+    // Check if the current save priority is higher than the one being requested
+    if (saving && priority < savePriority) {
+        console.log('Higher priority save requested. Cancelling current save.');
+        return;
+    }
+
+    saving = true;
+    savePriority = priority;
+
     const saveData = {
         player: preparePlayerForSave(player),
         currentWave: currentWave,
         currentEnemies: currentEnemies,
         selectedEnemy: selectedEnemy,
         statMod: statMod,
-        potionPrice: potionPrice,
+        potionPrice: potionPrice
     };
+
+    const permaData = {
+        permanent: permanent
+    };
+
     localStorage.setItem(saveKey, JSON.stringify(saveData));
+    localStorage.setItem(saveKey2, JSON.stringify(permaData));
+
+    saving = false;
     console.log('Saved data:', saveData); // For debugging
 }
+
+
 
 // Updated loadGame function
 function loadGame() {
     const savedData = localStorage.getItem(saveKey);
+    const savedData2 = localStorage.getItem(saveKey2);
     if (savedData) {
         const parsedData = JSON.parse(savedData);
         player = restorePlayerAfterLoad(parsedData.player);
@@ -648,15 +934,26 @@ function loadGame() {
         selectedEnemy = parsedData.selectedEnemy;
         statMod = parsedData.statMod;
         potionPrice = parsedData.potionPrice;
-        updateUI();
+        log('A previous game has been loaded.');
         console.log('Loaded player data:', player); // For debugging
+
+        if (currentEnemies.length == 0) {
+            nextWave();
+        }
     } else {
         log('No saved game found.');
     }
+
+    if (savedData2) {
+        const parsed = JSON.parse(savedData2);
+        permanent = parsed.permanent;
+        log(`Soul data loaded.`)
+    }
+    updateUI();
 }
 
 function autoSave() {
-    saveGame();
+    saveGame(0);
     setTimeout(autoSave, 3000); // in ms
 }
 
@@ -671,4 +968,58 @@ function initializeGame() {
     }
     autoSave();
     updateUI();
+}
+
+function updateSoulsShop() {
+    const soulsItemsContainer = document.getElementById('souls-items');
+    soulsItemsContainer.innerHTML = '';
+
+    for (const [upgradeKey, upgradeInfo] of Object.entries(permanent.upgrades)) {
+        const button = document.createElement('button');
+        const currentValue = permanent[upgradeKey] || 0;
+        const isAtCap = currentValue >= upgradeInfo.cap;
+
+        button.innerHTML = `
+            ${formatUpgradeName(upgradeKey)}: ${currentValue}/${upgradeInfo.cap}<br>
+            +${upgradeInfo.amount} for ${upgradeInfo.price} souls
+        `;
+        button.disabled = isAtCap || permanent.souls < upgradeInfo.price;
+        button.onclick = () => purchaseUpgrade(upgradeKey);
+
+        soulsItemsContainer.appendChild(button);
+    }
+
+    // Update souls counter
+    document.getElementById('souls-counter').textContent = `Souls: ${permanent.souls}`;
+}
+
+function formatUpgradeName(key) {
+    return key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase());
+}
+
+function purchaseUpgrade(upgradeKey) {
+    const upgrade = permanent.upgrades[upgradeKey];
+    if (permanent.souls >= upgrade.price) {
+        permanent.souls -= upgrade.price;
+        permanent[upgradeKey] = (permanent[upgradeKey] || 0) + upgrade.amount;
+
+        // Check if we need to cap the upgrade
+        if (permanent[upgradeKey] > upgrade.cap) {
+            permanent[upgradeKey] = upgrade.cap;
+        }
+
+        // Update the UI
+        updateUI();
+        saveGame(2);
+    }
+}
+
+function applyStats() {
+    player.maxHealth += permanent.bonusHealth || 0;
+    player.finalHealth = player.health + (permanent.bonusHealth || 0);
+    applyStats2();
+}
+
+function applyStats2() {
+    player.finalExperience = (player.baseExperienceMultiplier + (permanent.bonusExperience || 0) + (player.bonusExperience2 || 0))
 }

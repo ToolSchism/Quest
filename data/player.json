@@ -1,8 +1,10 @@
 {
     "maxHealth": 50,
     "health": 50,
-    "attack": 5,
-    "defense": 0,
+    "finalHealth": 50,
+    "attack": 6,
+    "baseExperienceMultiplier": 1,
+    "defense": 1,
     "tempDefense": 0,
     "tempAttack": 0,
     "level": 1,
@@ -24,27 +26,29 @@
     "phoenixRevive": false,
     "berserkerRage": false,
     "mirrorShieldChance": 0,
-    "experienceMultiplier": 1,
+    "bonusExperience2": 0,
+    "bonusExperience": 0,
+    "finalExperience": 0,
     "tempCritChance": 0,
     "bonusCritChance": 0,
     "wither": 0,
     "age": 0,
     "shop": {
         "potion": {
-            "price": 10,
-            "priceUpdate": 10
+            "price": 5,
+            "priceUpdate": 5
         },
         "whetstone": {
             "price": 50,
-            "priceUpdate": 50
+            "priceUpdate": 10
         },
         "shredOfWisdom": {
-            "price": 100,
-            "priceUpdate": 100
+            "price": 50,
+            "priceUpdate": 25
         },
         "tankBrew": {
-            "price": 100,
-            "priceUpdate": 50
+            "price": 40,
+            "priceUpdate": 10
         }
     }    
 }

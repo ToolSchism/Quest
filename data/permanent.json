@@ -5,6 +5,11 @@
             "amount": 5,
             "price": 10,
             "cap": 50
+        },
+        "bonusExperience": {
+            "amount": 0.05,
+            "price": 25,
+            "cap": 0.25
         }
     }
 }

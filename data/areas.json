@@ -1,0 +1,23 @@
+{
+    "forest": {
+        "enemies": ["slime", "goblin", "skeletal mage", "weretree"],
+        "finalWave": ["forest horror"],
+        "hex": "145235",
+        "startingWave": 1,
+        "endingWave": 15
+    },
+    "cave": {
+        "enemies": ["reaper", "cyclops mage", "bat"],
+        "finalWave": ["reaper", "reaper", "reaper", "reaper"],
+        "hex": "555555",
+        "startingWave": 16,
+        "endingWave": 30
+    },
+    "castle": {
+        "enemies": ["corrupted knight", "zombie", "dark sorcerer", "bat"],
+        "finalWave": ["corrupted knight", "corrupted knight", "corrupted knight"],
+        "hex": "333333",
+        "startingWave": 31,
+        "endingWave": 50
+    }
+}

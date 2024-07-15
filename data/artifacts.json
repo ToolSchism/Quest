@@ -61,8 +61,8 @@
     },
     "Tome of Knowledge": {
         "description": "Gain 50% more xp. Shreds of wisdom give 5% more xp instead of 3%.",
-        "onGet": "player.experienceMultiplier += 0.5; player.hasToK = true;",
-        "onDiscard": "player.experienceMultiplier -= 0.5; player.hasToK = false;"
+        "onGet": "player.bonusExperience2 += 0.5; player.hasToK = true;",
+        "onDiscard": "player.bonusExperience2 -= 0.5; player.hasToK = false;"
     },
     "Flag of War": {
         "description": "Bravery also gives a temporary 30% /crit/ chance on use.",
